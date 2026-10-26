@@ -153,7 +153,7 @@
   const feedList = feedSection?.querySelector('.sidebar__section-content');
   const sidebarTitle = document.createElement('div');
   sidebarTitle.className = 'sidebar__title cf-sidebar-heading';
-  sidebarTitle.innerHTML = '<span>Ленты</span><button type="button" class="cf-sidebar-edit" aria-label="Изменить ленты" title="Изменить ленты">Изменить</button>';
+  sidebarTitle.innerHTML = '<span>Ленты</span><button type="button" class="cf-icon cf-sidebar-settings" aria-label="Настроить ленты" title="Настроить ленты"><svg class="icon icon--settings" width="22" height="22" aria-hidden="true"><use href="#sprite-settings"></use></svg></button>';
   feedSection?.prepend(sidebarTitle);
   const otherSection = document.createElement('div');
   otherSection.className = 'sidebar__section';

@@ -164,3 +164,5 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
   .navbar > .tabs { width: 100%; }
   .navbar__right { margin-bottom: 12px; }
 }
+
+.cf-sidebar-heading .cf-sidebar-settings { color: var(--theme-color-text-secondary); margin-right: -4px; }
