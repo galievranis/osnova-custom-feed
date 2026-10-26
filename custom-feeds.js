@@ -234,6 +234,10 @@
   });
 
   function renderSidebar() {
+    if(variant===2){
+      const label=feedList?.querySelector('a[data-local-original-href="https://vc.ru/my"] .sidebar-item__label');
+      if(label)label.textContent=state.visible.length>0?'Мои ленты':'Моя лента';
+    }
     sidebarFeeds.innerHTML = (variant===2 ? [] : state.visible).map(id=>all().find(f=>f.id===id)).filter(Boolean).map(f=>`<button type="button" class="sidebar-item cf-sidebar-feed ${state.active===f.id?'sidebar-item--active':''}" data-feed="${esc(f.id)}" ${state.active===f.id?'aria-current="page"':''} title="${esc(f.name)}">${iconSVG(f.icon)}<div class="sidebar-item__text"><span class="sidebar-item__label">${esc(f.name)}</span></div></button>`).join('');
     feedList?.querySelectorAll('a.sidebar-item').forEach(a=>{
       const active = (variant===2 || !state.active) && a.dataset.localOriginalHref===baseActive;
