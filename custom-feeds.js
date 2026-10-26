@@ -14,7 +14,8 @@
   Object.entries(referenceAvatars).filter(([name]) => !topics.some(t=>t.name===name) && !authors.some(a=>a.name===name)).forEach(([name,image]) => {
     (name==='Сервисы'?topics:authors).push({id:(name==='Сервисы'?'topic:':'author:')+name,name,image});
   });
-  const sources = [...topics,...authors];
+  const tags=['нейросети','бизнес','стартапы','дизайн','маркетинг','технологии','путешествия','продукт','разработка'].map(name=>({id:'tag:'+name,name}));
+  const sources = [...topics,...authors,...tags];
   const outlineIcons = {
     bookmark: ['Закладка','M6 4h12v17l-6-4-6 4z'],
     folder: ['Папка','M3 7V5a2 2 0 0 1 2-2h5l3 3h6a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7h18'],
@@ -73,7 +74,7 @@
   const empty=document.createElement('div');empty.className='cf-empty';empty.hidden=true;empty.innerHTML='<h3>Пока нет публикаций</h3><p>В доступной ленте нет постов выбранных авторов и тем.</p>';$('.content-list')?.prepend(empty);
   const variantTabs = document.createElement('div');
   variantTabs.className='cf-variant-tabs';
-  variantTabs.setAttribute('role','tablist');
+  variantTabs.setAttribute('role','navigation');
   variantTabs.setAttribute('aria-label','Моя лента');
   $('.content-list')?.before(variantTabs);
   const variants = document.createElement('nav');
@@ -81,6 +82,15 @@
   variants.innerHTML=[1,2].map(v=>`<a href="?variant=${v}" ${v===variant?'aria-current="page"':''}>Вариант ${v}</a>`).join('');
   document.body.append(variants);
   if(variant===2 && state.active)baseActive='https://vc.ru/my';
+  const sortOptions=[['date','По дате'],['popular','По популярности'],['viewed','Просмотренные']];
+  let feedSort='date';
+  const viewedPosts=new Set();
+  const originalIndex=new Map(posts.map((p,i)=>[p,i]));
+  const postPopularity=post=>{const buttons=post.querySelectorAll('button');const text=buttons[buttons.length-1]?.textContent.trim().replace(/\s/g,'').replace(',','.') || '0';return (parseFloat(text)||0)*(/k|к/i.test(text)?1000:1);};
+  const sortPopup=document.createElement('div');sortPopup.className='cf-sort-popover';sortPopup.id='cf-sort-popover';sortPopup.setAttribute('popover','auto');sortPopup.setAttribute('role','menu');sortPopup.setAttribute('aria-label','Сортировка ленты');document.body.append(sortPopup);
+  function renderSort(){sortPopup.innerHTML=sortOptions.map(([id,name])=>`<button type="button" role="menuitemradio" aria-checked="${feedSort===id}" data-sort="${id}"><span>${name}</span>${feedSort===id?'<svg class="icon" width="20" height="20" aria-hidden="true"><use href="#sprite-tick"></use></svg>':''}</button>`).join('');}
+  sortPopup.onclick=event=>{const option=event.target.closest('[data-sort]');if(option){feedSort=option.dataset.sort;sortPopup.hidePopover();lastFeedKey=null;renderFeed();$('.cf-sort-trigger').focus();}};
+  sortPopup.addEventListener('toggle',event=>$('.cf-sort-trigger')?.setAttribute('aria-expanded',String(event.newState==='open')));
   let lastFeedKey = null;
   function renderFeed() {
 
@@ -88,8 +98,9 @@
     renderSidebar();
     const personalTabs = variant===2 && baseActive==='https://vc.ru/my';
     const tabFeeds=state.visible.map(id=>all().find(f=>f.id===id)).filter(Boolean);
-    variantTabs.hidden=!personalTabs || !tabFeeds.length;
-    variantTabs.innerHTML=personalTabs && tabFeeds.length ? `<button type="button" role="tab" aria-selected="${!state.active}" data-personal-feed="">По умолчанию</button>`+tabFeeds.map(f=>`<button type="button" role="tab" aria-selected="${state.active===f.id}" data-personal-feed="${esc(f.id)}">${esc(f.name)}</button>`).join('') : '';
+    variantTabs.hidden=!personalTabs;
+    document.documentElement.classList.toggle('cf-personal-v2',personalTabs);
+    variantTabs.innerHTML=personalTabs ? `<div class="cf-feed-tabs-scroll" role="tablist" aria-label="Ленты"><button type="button" role="tab" aria-selected="${!state.active}" data-personal-feed="">Подписки</button>`+tabFeeds.map(f=>`<button type="button" role="tab" aria-selected="${state.active===f.id}" data-personal-feed="${esc(f.id)}">${esc(f.name)}</button>`).join('')+'</div><button type="button" class="cf-icon cf-sort-trigger" aria-label="Сортировка ленты" aria-haspopup="menu" aria-expanded="false" aria-controls="cf-sort-popover"><svg class="icon" width="24" height="24" aria-hidden="true"><use href="#sprite-sort"></use></svg></button>' : '';
 
     const feed=all().find(f=>f.id===state.active);
     const personal = Boolean(feed) || baseActive === 'https://vc.ru/my';
@@ -100,6 +111,10 @@
     if(key!==lastFeedKey){
       const shuffled=[...organic];
       for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+      if(personalTabs){
+        if(feedSort==='popular')shuffled.sort((a,b)=>postPopularity(b)-postPopularity(a));
+        else shuffled.sort((a,b)=>originalIndex.get(a)-originalIndex.get(b));
+      }
       const slots=organic.map(p=>{const slot=document.createComment('post');p.replaceWith(slot);return slot;});
       slots.forEach((slot,i)=>slot.replaceWith(shuffled[i]));
       const size=Math.min(shuffled.length,8+Math.floor(Math.random()*5));
@@ -109,16 +124,24 @@
     [...list.children].forEach(e=>{
       if(e===empty)return;
       const isPost=organic.includes(e);
-      const show=isPost ? e.dataset.feedVisible!=='false' : !personal;
+      const show=isPost ? (personalTabs && feedSort==='viewed' ? viewedPosts.has(e) : e.dataset.feedVisible!=='false') : !personal;
       e.hidden=!show;e.style.display=show?'':'none';
     });
-    empty.hidden=true;
+    empty.hidden=!(personalTabs && feedSort==='viewed' && !organic.some(p=>!p.hidden));
+    if(!empty.hidden)empty.innerHTML='<h3>Нет просмотренных постов</h3>';
+    organic.filter(p=>!p.hidden).forEach(p=>viewedPosts.add(p));
     organic.forEach(p=>p.classList.remove('cf-first-post'));
     [...list.children].find(p=>p.classList.contains('content')&&!p.hidden)?.classList.add('cf-first-post');
     navbar.querySelectorAll('.tabs__tab').forEach(t=>t.classList.toggle('tabs__tab--active',(variant===2 || !feed) && t.dataset.localOriginalHref===baseActive));
   }
 
   variantTabs.onclick=event=>{
+    const sortButton=event.target.closest('.cf-sort-trigger');
+    if(sortButton){
+      if(sortPopup.matches(':popover-open'))sortPopup.hidePopover();
+      else {renderSort();sortPopup.showPopover();const anchor=sortButton.getBoundingClientRect();sortPopup.style.left=Math.max(16,Math.min(anchor.right-sortPopup.offsetWidth,innerWidth-sortPopup.offsetWidth-16))+'px';sortPopup.style.top=Math.min(anchor.bottom+8,innerHeight-sortPopup.offsetHeight-16)+'px';}
+      return;
+    }
     const button=event.target.closest('[data-personal-feed]');
     if(button){baseActive='https://vc.ru/my';state.active=button.dataset.personalFeed || null;save();renderFeed();}
   };
@@ -135,16 +158,15 @@
   function editor(id) {
     const existing=state.custom.find(f=>f.id===id);
     draft=existing?{...existing,sources:[...existing.sources]}:{name:'',sources:[],icon:'bookmark'};
-    dialog.innerHTML=head(existing?'Редактировать ленту':'Новая лента',true)+`<form id="cf-form"><div class="cf-body"><label class="cf-label" for="cf-name">Название</label><div class="cf-name-control">${variant===1?`<button type="button" class="cf-icon cf-name-icon" data-action="pick-icon" aria-label="Выбрать иконку ленты" aria-expanded="false" aria-controls="cf-icon-popover">${iconSVG(draft.icon)}</button>`:''}<input class="cf-input" id="cf-name" placeholder="Название ленты" maxlength="40" required value="${esc(draft.name)}" aria-describedby="cf-name-count"><span class="cf-count" id="cf-name-count" aria-label="Осталось символов">${40-draft.name.length}</span></div>${variant===1?'<div class="cf-icon-popover" id="cf-icon-popover" popover="auto" role="group" aria-label="Иконка ленты"><div class="cf-icon-grid"></div></div>':''}<h3 class="cf-section">Авторы и темы</h3><p class="cf-intro">Добавьте хотя бы один источник. В ленте будут посты любого из выбранных авторов или тем.</p><p class="cf-selected-count" aria-live="polite"></p><input class="cf-input" id="cf-search" type="search" placeholder="Поиск авторов и тем" aria-label="Поиск авторов и тем"><div class="cf-segments" role="tablist" aria-label="Тип источников"><button type="button" role="tab" aria-selected="true" data-kind="topic">Темы</button><button type="button" role="tab" aria-selected="false" data-kind="author">Авторы</button></div><div id="cf-results"></div><div class="cf-error" role="alert"></div></div><footer class="cf-foot">${existing?'<button class="cf-danger" type="button" data-action="delete">Удалить ленту</button>':''}<button class="cf-primary" id="cf-save" type="submit">${existing?'Сохранить':'Создать ленту'}</button></footer></form>`;
+    dialog.innerHTML=head(existing?'Редактировать ленту':'Новая лента',true)+`<form id="cf-form"><div class="cf-body"><label class="cf-label" for="cf-name">Название</label><div class="cf-name-control">${variant===1?`<button type="button" class="cf-icon cf-name-icon" data-action="pick-icon" aria-label="Выбрать иконку ленты" aria-expanded="false" aria-controls="cf-icon-popover">${iconSVG(draft.icon)}</button>`:''}<input class="cf-input" id="cf-name" placeholder="Название ленты" maxlength="40" required value="${esc(draft.name)}" aria-describedby="cf-name-count"><span class="cf-count" id="cf-name-count" aria-label="Осталось символов">${40-draft.name.length}</span></div>${variant===1?'<div class="cf-icon-popover" id="cf-icon-popover" popover="auto" role="group" aria-label="Иконка ленты"><div class="cf-icon-grid"></div></div>':''}<div class="cf-source-picker"><input class="cf-input" id="cf-search" type="search" placeholder="Поиск авторов, тем и тегов" aria-label="Поиск авторов, тем и тегов"><div class="cf-segments" role="tablist" aria-label="Тип источников"><button type="button" role="tab" aria-selected="true" data-kind="topic">Темы</button><button type="button" role="tab" aria-selected="false" data-kind="author">Авторы</button><button type="button" role="tab" aria-selected="false" data-kind="tag">Теги</button></div><div id="cf-results"></div><div class="cf-error" role="alert"></div></div></div><footer class="cf-foot">${existing?'<button class="cf-danger" type="button" data-action="delete">Удалить ленту</button>':''}<button class="cf-primary" id="cf-save" type="submit">${existing?'Сохранить':'Создать ленту'}</button></footer></form>`;
     updateSources();if(variant===1){renderIcons();$('#cf-icon-popover',dialog).addEventListener('toggle',event=>$('.cf-name-icon',dialog)?.setAttribute('aria-expanded',String(event.newState==='open')));$('.cf-body',dialog).addEventListener('scroll',()=>$('#cf-icon-popover',dialog)?.hidePopover());}$('#cf-name',dialog).focus();
     $('#cf-form',dialog).onsubmit=e=>{e.preventDefault();const name=draft.name.trim();if(!name||!draft.sources.length)return;if(all().some(f=>f.id!==draft.id&&f.name.toLocaleLowerCase()===name.toLocaleLowerCase())){$('.cf-error',dialog).textContent='Лента с таким названием уже существует';return;}const feed={id:draft.id||'custom:'+crypto.randomUUID(),name,icon:validIcon(draft.icon),sources:[...draft.sources]};const i=state.custom.findIndex(f=>f.id===feed.id);if(i<0){state.custom.push(feed);selectedVisible.push(feed.id);}else state.custom[i]=feed;state.visible=[...selectedVisible];if(i<0)state.active=feed.id;if(!state.visible.includes(state.active))state.active=null;save();renderFeed();manager();toast(i<0?'Лента создана':'Изменения сохранены');};
   }
   function updateSources() {
     const kind=$('[data-kind][aria-selected=true]',dialog).dataset.kind;
     const query=$('#cf-search',dialog).value.trim().toLocaleLowerCase();
-    $('.cf-selected-count',dialog).textContent=draft.sources.length ? 'Выбрано: ' + sourceCount(draft.sources.length) : '';
-    const results=sources.filter(s=>s.id.startsWith(kind+':')&&s.name.toLocaleLowerCase().includes(query));
-    $('#cf-results',dialog).innerHTML=results.map((s,i)=>`<label class="cf-row"><span class="cf-avatar">${s.image?`<img src="${esc(s.image)}" alt="">`:esc(s.name.slice(0,1))}</span><span class="cf-info"><span class="cf-name">${esc(s.name)}</span><div class="cf-sub">${kind==='topic'?'Тема':'Автор'}</div></span><input type="checkbox" class="cf-check" data-source="${esc(s.id)}" ${draft.sources.includes(s.id)?'checked':''} aria-label="${esc(s.name)}"></label>`).join('')||'<p class="cf-hint">Ничего не найдено. Попробуйте другое имя или тему.</p>';
+    const results=sources.filter(s=>s.id.startsWith(kind+':')&&s.name.toLocaleLowerCase().includes(query.replace(/^#/,'')));
+    $('#cf-results',dialog).innerHTML=results.map((s,i)=>`<label class="cf-row"><span class="cf-avatar">${kind==='tag'?'#':s.image?`<img src="${esc(s.image)}" alt="">`:esc(s.name.slice(0,1))}</span><span class="cf-info"><span class="cf-name">${esc(s.name)}</span><div class="cf-sub">${kind==='topic'?'Тема':kind==='tag'?'Тег':'Автор'}</div></span><input type="checkbox" class="cf-check" data-source="${esc(s.id)}" ${draft.sources.includes(s.id)?'checked':''} aria-label="${esc(s.name)}"></label>`).join('')||'<p class="cf-hint">Ничего не найдено. Попробуйте другое имя или тему.</p>';
     $('#cf-save',dialog).disabled=!draft.name.trim()||!draft.sources.length;
   }
   trigger.onclick=()=>{opener=document.activeElement;selectedVisible=[...state.visible];manager();dialog.showModal();};

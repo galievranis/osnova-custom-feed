@@ -180,3 +180,20 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-icon-popover:popover-open { animation: cf-popover-enter .15s ease; }
 @keyframes cf-popover-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .cf-icon-popover:popover-open { animation: none; } }
+.cf-source-picker{margin-top:24px}
+.cf-segments{border:0;gap:8px;margin:16px 0;flex-wrap:wrap}
+.cf-segments button{flex:0 0 auto;border:1px solid var(--theme-color-border);border-radius:10px;padding:6px 12px;background:var(--theme-color-background-content);color:var(--theme-color-text-primary);font-size:15px;line-height:22px}
+.cf-segments button[aria-selected=true]{border-color:var(--cf-blue);background:var(--cf-blue-soft)}
+.cf-segments button:hover{background:var(--theme-color-button-transparent-hover)}
+.cf-personal-v2 .feed-sorting__desktop{display:none}
+.cf-variant-tabs{align-items:center;gap:12px;overflow:visible}
+.cf-feed-tabs-scroll{display:flex;gap:16px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:thin}
+.cf-variant-tabs .cf-sort-trigger{flex:0 0 32px;width:32px;height:32px;padding:0;border:0;display:grid;place-items:center;border-radius:50%;color:var(--theme-color-text-secondary)}
+.cf-variant-tabs .cf-sort-trigger:hover{background:var(--theme-color-button-transparent-hover)}
+.cf-sort-popover{position:fixed;inset:auto;margin:0;width:220px;max-width:calc(100vw - 32px);padding:6px;border:0;border-radius:10px;background:var(--theme-color-popover-background);color:var(--theme-color-text-primary);box-shadow:var(--theme-floating-shadow)}
+.cf-sort-popover button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;border:0;border-radius:8px;padding:10px;font:inherit;font-size:15px;line-height:22px;color:inherit;background:transparent;cursor:pointer;text-align:left}
+.cf-sort-popover button[aria-checked=true]{background:var(--theme-color-popover-item-bg-active);font-weight:500}
+.cf-sort-popover button:hover{background:var(--theme-color-popover-item-bg-active-hover)}
+.cf-sort-popover .icon{color:var(--theme-color-signal-positive-default)}
+.cf-sort-popover button:focus-visible{outline:2px solid var(--cf-blue);outline-offset:-2px}
+@media(min-width:925px){.cf-personal-v2 .feed-sorting{display:none}}
