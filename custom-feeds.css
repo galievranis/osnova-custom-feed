@@ -161,10 +161,10 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 
 .cf-sidebar-heading .cf-sidebar-settings { color: var(--theme-color-text-secondary); margin-right: -4px; }
 
-/* Secondary uses the same capsule geometry and platform surface/shadows. */
-.cf-secondary { background: var(--theme-color-button-secondary); color: var(--theme-color-text-primary); box-shadow: var(--theme-color-button-secondary-shadow); }
-.cf-secondary:hover:not(:disabled) { background: var(--theme-color-button-secondary); box-shadow: var(--theme-color-button-secondary-shadow-hover); }
-.cf-secondary:active:not(:disabled) { background: var(--theme-color-button-secondary); box-shadow: var(--theme-color-button-secondary-shadow-active); }
+/* Feed creation follows the gray Subscribe button supplied by the designer. */
+.cf-secondary { background: var(--theme-color-button-minimal); color: var(--theme-color-text-primary); box-shadow: none; }
+.cf-secondary:hover:not(:disabled) { background: var(--theme-color-button-minimal-hover); box-shadow: none; }
+.cf-secondary:active:not(:disabled) { background: var(--theme-color-button-minimal-active); box-shadow: none; }
 .cf-name-control { display: flex; align-items: center; gap: 6px; height: 50px; padding: 0 15px; border: 1px solid var(--theme-color-field-border-default); border-radius: 12px; background: var(--theme-color-field-background-default); }
 .cf-name-control:hover { background: var(--theme-color-field-background-hover); border-color: var(--theme-color-field-border-hover); box-shadow: var(--theme-shadow-field); }
 .cf-name-control:focus-within { background: var(--theme-color-field-background-hover); border-color: var(--theme-color-field-border-active); box-shadow: var(--theme-shadow-field); }
