@@ -85,12 +85,6 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-segments { display: flex; gap: 16px; border-bottom: 1px solid var(--theme-color-border); margin: 20px 0 14px; }
 .cf-segments button { flex: 1; padding: 12px 0 9px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--theme-color-text-secondary); font-size: 15px; line-height: 22px; }
 .cf-segments button[aria-selected=true] { color: var(--theme-color-text-primary); border-bottom-color: var(--cf-blue); }
-.cf-icon-field { margin: 20px 0 24px; }
-.cf-icon-strip { display: flex; gap: 8px; align-items: center; overflow-x: auto; padding: 4px 2px 10px; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--theme-color-scrollbar) transparent; }
-.cf-icon-option { display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; border: 0; border-radius: 50%; background: transparent; color: var(--theme-color-text-secondary); }
-.cf-icon-option:hover { background: var(--theme-color-button-transparent-hover); }
-.cf-icon-option[aria-pressed=true] { background: var(--theme-color-button-minimal); color: var(--theme-color-text-primary); }
-.cf-icon-strip .cf-icon-option:focus-visible { outline-offset: -2px; }
 .cf-outline-icon, .cf-outline-icon path { fill: none !important; stroke: currentColor; }
 
 /* Sidebar: custom structure is intentional; geometry follows the shared system. */
@@ -166,3 +160,23 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 }
 
 .cf-sidebar-heading .cf-sidebar-settings { color: var(--theme-color-text-secondary); margin-right: -4px; }
+
+/* Secondary uses the same capsule geometry and platform surface/shadows. */
+.cf-secondary { background: var(--theme-color-button-secondary); color: var(--theme-color-text-primary); box-shadow: var(--theme-color-button-secondary-shadow); }
+.cf-secondary:hover:not(:disabled) { background: var(--theme-color-button-secondary); box-shadow: var(--theme-color-button-secondary-shadow-hover); }
+.cf-secondary:active:not(:disabled) { background: var(--theme-color-button-secondary); box-shadow: var(--theme-color-button-secondary-shadow-active); }
+.cf-name-control { display: flex; align-items: center; gap: 6px; height: 50px; padding: 0 15px; border: 1px solid var(--theme-color-field-border-default); border-radius: 12px; background: var(--theme-color-field-background-default); }
+.cf-name-control:hover { background: var(--theme-color-field-background-hover); border-color: var(--theme-color-field-border-hover); box-shadow: var(--theme-shadow-field); }
+.cf-name-control:focus-within { background: var(--theme-color-field-background-hover); border-color: var(--theme-color-field-border-active); box-shadow: var(--theme-shadow-field); }
+.cf-name-control .cf-input, .cf-name-control .cf-input:hover, .cf-name-control .cf-input:focus, .cf-dialog .cf-name-control .cf-input:focus-visible { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; outline: none; }
+.cf-name-icon { margin-left: -8px; }
+.cf-name-control .cf-count { flex-shrink: 0; margin: 0; color: var(--theme-color-text-secondary-light); font-variant-numeric: tabular-nums; }
+.cf-icon-popover { position: fixed; inset: auto; margin: 0; width: 250px; max-width: calc(100vw - 32px); max-height: min(248px,calc(100dvh - 32px)); padding: 8px; border: 0; border-radius: 10px; background: var(--theme-color-popover-background); color: var(--theme-color-text-primary); box-shadow: var(--theme-floating-shadow); overflow-y: auto; scrollbar-width: thin; }
+.cf-icon-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 4px; }
+.cf-icon-option { display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--theme-color-text-secondary); }
+.cf-icon-option:hover { background: var(--theme-color-button-transparent-hover); }
+.cf-icon-option[aria-pressed=true] { background: var(--theme-color-popover-item-bg-active); color: var(--theme-color-text-primary); }
+.cf-icon-option:focus-visible { outline-offset: -2px !important; }
+.cf-icon-popover:popover-open { animation: cf-popover-enter .15s ease; }
+@keyframes cf-popover-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .cf-icon-popover:popover-open { animation: none; } }
