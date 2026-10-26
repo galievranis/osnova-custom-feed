@@ -1,0 +1,5 @@
+.DS_Store
+*-preview.png
+feed-preview.png
+vcru/*.html
+vcru/**/*.js
