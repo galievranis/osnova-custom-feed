@@ -73,6 +73,24 @@
   $('.navbar__right',navbar).prepend(trigger);
 
   const empty=document.createElement('div');empty.className='cf-empty';empty.hidden=true;empty.innerHTML='<h3>Пока нет публикаций</h3><p>В доступной ленте нет постов выбранных авторов и тем.</p>';$('.content-list')?.prepend(empty);
+  const mobileNav=document.createElement('nav');mobileNav.className='cf-mobile-nav';mobileNav.setAttribute('aria-label','Ленты');$('.feed-sorting').before(mobileNav);
+  function renderMobileNav(){
+    const previousScroll=$('.cf-mobile-scroll',mobileNav)?.scrollLeft || 0;
+    const baseFeeds=[['https://vc.ru/popular','Популярное'],['https://vc.ru/new','Свежее'],['https://vc.ru/my','Подписки']];
+    mobileNav.innerHTML='<div class="cf-mobile-scroll" role="tablist" aria-label="Ленты">'+baseFeeds.map(([url,name])=>`<button type="button" role="tab" aria-selected="${!state.active && baseActive===url}" data-mobile-base="${url}">${name}</button>`).join('')+state.visible.map(id=>all().find(f=>f.id===id)).filter(Boolean).map(f=>`<button type="button" role="tab" aria-selected="${state.active===f.id}" data-mobile-feed="${esc(f.id)}">${esc(f.name)}</button>`).join('')+'</div><div class="cf-mobile-actions"><button type="button" class="cf-icon cf-sort-trigger cf-mobile-sort" aria-label="Сортировка ленты" aria-haspopup="menu" aria-controls="cf-sort-popover" aria-expanded="false"><svg class="icon" width="24" height="24" aria-hidden="true"><use href="#sprite-sort"></use></svg></button><button type="button" class="cf-icon cf-mobile-manage" aria-label="Настроить ленты" title="Добавить или настроить ленты"><svg class="icon" width="24" height="24" aria-hidden="true"><use href="#sprite-plus"></use></svg></button></div>';
+    const scroll=$('.cf-mobile-scroll',mobileNav);scroll.scrollLeft=previousScroll;
+    if(mobileNav.getBoundingClientRect().width){
+      const active=$('[aria-selected=true]',scroll),area=scroll.getBoundingClientRect(),box=active?.getBoundingClientRect();
+      if(box && box.right>area.right)scroll.scrollLeft+=box.right-area.right;
+      else if(box && box.left<area.left)scroll.scrollLeft-=area.left-box.left;
+    }
+  }
+  mobileNav.onclick=event=>{
+    if(event.target.closest('.cf-mobile-manage')){openManager({currentTarget:event.target.closest('button')});return;}
+    const sorter=event.target.closest('.cf-mobile-sort');if(sorter){toggleSort(sorter,true);return;}
+    const button=event.target.closest('[data-mobile-base],[data-mobile-feed]');
+    if(button){if(button.dataset.mobileBase){baseActive=button.dataset.mobileBase;state.active=null;}else state.active=button.dataset.mobileFeed;save();renderFeed();}
+  };
   const variantTabs = document.createElement('div');
   variantTabs.className='cf-variant-tabs';
   variantTabs.setAttribute('role','navigation');
@@ -96,13 +114,14 @@
   const postPopularity=post=>{const buttons=post.querySelectorAll('button');const text=buttons[buttons.length-1]?.textContent.trim().replace(/\s/g,'').replace(',','.') || '0';return (parseFloat(text)||0)*(/k|к/i.test(text)?1000:1);};
   const sortPopup=document.createElement('div');sortPopup.className='cf-sort-popover';sortPopup.id='cf-sort-popover';sortPopup.setAttribute('popover','auto');sortPopup.setAttribute('role','menu');sortPopup.setAttribute('aria-label','Сортировка ленты');document.body.append(sortPopup);
   function renderSort(){sortPopup.innerHTML=sortOptions.map(([id,name])=>`<button type="button" role="menuitemradio" aria-checked="${feedSort===id}" data-sort="${id}"><span>${name}</span>${feedSort===id?'<svg class="icon" width="20" height="20" aria-hidden="true"><use href="#sprite-tick"></use></svg>':''}</button>`).join('');}
-  sortPopup.onclick=event=>{const option=event.target.closest('[data-sort]');if(option){feedSort=option.dataset.sort;sortPopup.hidePopover();lastFeedKey=null;renderFeed();(variant!==2?sortLabel:$('.cf-variant-tabs .cf-sort-trigger'))?.focus();}};
+  sortPopup.onclick=event=>{const option=event.target.closest('[data-sort]');if(option){feedSort=option.dataset.sort;sortPopup.hidePopover();lastFeedKey=null;renderFeed();(matchMedia('(max-width:924px)').matches?$('.cf-mobile-sort'):(variant!==2?sortLabel:$('.cf-variant-tabs .cf-sort-trigger')))?.focus();}};
   sortPopup.addEventListener('toggle',event=>document.querySelectorAll('.cf-sort-trigger').forEach(button=>button.setAttribute('aria-expanded',String(event.newState==='open'))));
   let lastFeedKey = null;
   function renderFeed() {
 
     if(variant===2 && state.active)baseActive='https://vc.ru/my';
     renderSidebar();
+    renderMobileNav();
     const personalTabs = variant===2 && baseActive==='https://vc.ru/my';
     const tabFeeds=state.visible.map(id=>all().find(f=>f.id===id)).filter(Boolean);
     variantTabs.hidden=!personalTabs;

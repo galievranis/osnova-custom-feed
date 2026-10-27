@@ -212,3 +212,16 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-add-feed:hover{background:var(--theme-color-background-content)}
 .cf-add-feed[hidden],.cf-sidebar-settings[hidden]{display:none}
 .cf-sidebar-feed.sidebar-item--active { background: var(--theme-color-background-content); }
+/* A single mobile/tablet feed strip is shared by all desktop variants. */
+.cf-mobile-nav{display:none}
+@media(max-width:924px){
+  .feed-sorting,.cf-variant-tabs{display:none!important}
+  .cf-mobile-nav{display:flex;align-items:center;gap:8px;min-width:0;width:100%;box-sizing:border-box;padding:0 var(--cf-content-x);background:var(--theme-color-background-content);border-bottom:1px solid var(--theme-color-border);min-height:56px}
+  .cf-mobile-scroll{display:flex;align-items:stretch;gap:20px;flex:1;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .cf-mobile-scroll::-webkit-scrollbar{display:none}
+  .cf-mobile-scroll button{flex-shrink:0;border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--theme-color-text-secondary);font:inherit;font-size:15px;line-height:22px;white-space:nowrap;padding:16px 0 13px;cursor:pointer}
+  .cf-mobile-scroll button[aria-selected=true]{border-bottom-color:var(--cf-blue);color:var(--theme-color-text-primary)}
+  .cf-mobile-actions{display:flex;align-items:center;gap:4px;flex:0 0 auto;background:var(--theme-color-background-content);position:relative}
+  .cf-mobile-actions::before{content:'';position:absolute;right:100%;top:0;bottom:0;width:12px;background:linear-gradient(to right,transparent,var(--theme-color-background-content));pointer-events:none}
+  .cf-mobile-nav button:focus-visible{outline:2px solid var(--cf-blue);outline-offset:-2px}
+}
