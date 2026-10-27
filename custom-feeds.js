@@ -1,6 +1,7 @@
 (() => {
   'use strict';
-  const variant = new URLSearchParams(location.search).get('variant') === '2' ? 2 : 1;
+  const requestedVariant=Number(new URLSearchParams(location.search).get('variant'));
+  const variant=[1,2,3].includes(requestedVariant)?requestedVariant:1;
   document.documentElement.dataset.feedVariant = String(variant);
   const $ = (s, root = document) => root.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -79,7 +80,7 @@
   $('.content-list')?.before(variantTabs);
   const variants = document.createElement('nav');
   variants.className='cf-variant-switch';variants.setAttribute('aria-label','Вариант интерфейса');
-  variants.innerHTML=[1,2].map(v=>`<a href="?variant=${v}" ${v===variant?'aria-current="page"':''}>Вариант ${v}</a>`).join('');
+  variants.innerHTML=[1,2,3].map(v=>`<a href="?variant=${v}" ${v===variant?'aria-current="page"':''}>Вариант ${v}</a>`).join('');
   document.body.append(variants);
   if(variant===2 && state.active)baseActive='https://vc.ru/my';
   const sortOptions=[['date','По дате'],['popular','По популярности'],['viewed','Просмотренные']];
@@ -96,7 +97,7 @@
   const postPopularity=post=>{const buttons=post.querySelectorAll('button');const text=buttons[buttons.length-1]?.textContent.trim().replace(/\s/g,'').replace(',','.') || '0';return (parseFloat(text)||0)*(/k|к/i.test(text)?1000:1);};
   const sortPopup=document.createElement('div');sortPopup.className='cf-sort-popover';sortPopup.id='cf-sort-popover';sortPopup.setAttribute('popover','auto');sortPopup.setAttribute('role','menu');sortPopup.setAttribute('aria-label','Сортировка ленты');document.body.append(sortPopup);
   function renderSort(){sortPopup.innerHTML=sortOptions.map(([id,name])=>`<button type="button" role="menuitemradio" aria-checked="${feedSort===id}" data-sort="${id}"><span>${name}</span>${feedSort===id?'<svg class="icon" width="20" height="20" aria-hidden="true"><use href="#sprite-tick"></use></svg>':''}</button>`).join('');}
-  sortPopup.onclick=event=>{const option=event.target.closest('[data-sort]');if(option){feedSort=option.dataset.sort;sortPopup.hidePopover();lastFeedKey=null;renderFeed();(variant===1?sortLabel:$('.cf-variant-tabs .cf-sort-trigger'))?.focus();}};
+  sortPopup.onclick=event=>{const option=event.target.closest('[data-sort]');if(option){feedSort=option.dataset.sort;sortPopup.hidePopover();lastFeedKey=null;renderFeed();(variant!==2?sortLabel:$('.cf-variant-tabs .cf-sort-trigger'))?.focus();}};
   sortPopup.addEventListener('toggle',event=>document.querySelectorAll('.cf-sort-trigger').forEach(button=>button.setAttribute('aria-expanded',String(event.newState==='open'))));
   let lastFeedKey = null;
   function renderFeed() {
@@ -111,8 +112,8 @@
 
     const feed=all().find(f=>f.id===state.active);
     const personal = Boolean(feed) || baseActive === 'https://vc.ru/my';
-    document.documentElement.classList.toggle('cf-personal-v1',variant===1 && personal);
-    sortLabel.hidden=!(variant===1 && personal);
+    document.documentElement.classList.toggle('cf-personal-v1',variant!==2 && personal);
+    sortLabel.hidden=!(variant!==2 && personal);
     sortLabel.innerHTML=`<span>${sortOptions.find(([id])=>id===feedSort)[1]}</span><svg class="icon cf-sort-chevron" width="16" height="16" aria-hidden="true"><use href="#sprite-chevron_down"></use></svg>`;
     document.querySelectorAll('.feed-page__news,.feed-page__seen-posts-count').forEach(e=>{e.hidden=personal;e.style.display=personal?'none':'';});
     const list=$('.content-list');
@@ -159,7 +160,7 @@
   let draft, selectedVisible=[], opener;
   const head=(title,back=false)=>`<header class="cf-head">${back?'<button class="cf-icon" data-action="back" aria-label="Назад"><svg class="icon icon--back" width="22" height="22"><use href="#sprite-back"></use></svg></button>':''}<h2 id="cf-title">${title}</h2><button class="cf-icon" data-action="close" aria-label="Закрыть"><svg class="icon" width="22" height="22"><use href="#sprite-cross"></use></svg></button></header>`;
   const sourceCount = n => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'источник' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'источника' : 'источников');
-  const row=(f,custom)=>`<div class="cf-row">${variant===1?`<div class="cf-feed-icon">${iconSVG(f.icon)}</div>`:''}<label class="cf-info" for="cf-${esc(f.id)}"><div class="cf-name">${esc(f.name)}</div><div class="cf-sub">${esc(custom?sourceCount(f.sources.length):f.description)}</div></label>${custom?`<button class="cf-icon" data-edit="${esc(f.id)}" aria-label="Редактировать ${esc(f.name)}"><svg class="icon icon--pen" width="24" height="24"><use href="#sprite-pen"></use></svg></button>`:''}<input class="cf-check" type="checkbox" id="cf-${esc(f.id)}" data-visible="${esc(f.id)}" ${selectedVisible.includes(f.id)?'checked':''} aria-label="Показывать ${esc(f.name)}"></div>`;
+  const row=(f,custom)=>`<div class="cf-row">${variant!==2?`<div class="cf-feed-icon">${iconSVG(f.icon)}</div>`:''}<label class="cf-info" for="cf-${esc(f.id)}"><div class="cf-name">${esc(f.name)}</div><div class="cf-sub">${esc(custom?sourceCount(f.sources.length):f.description)}</div></label>${custom?`<button class="cf-icon" data-edit="${esc(f.id)}" aria-label="Редактировать ${esc(f.name)}"><svg class="icon icon--pen" width="24" height="24"><use href="#sprite-pen"></use></svg></button>`:''}<input class="cf-check" type="checkbox" id="cf-${esc(f.id)}" data-visible="${esc(f.id)}" ${selectedVisible.includes(f.id)?'checked':''} aria-label="Показывать ${esc(f.name)}"></div>`;
   function manager() {
     draft=null;
     dialog.innerHTML=head('Ваши ленты')+`<div class="cf-body"><h3 class="cf-section">Готовые подборки</h3>${presets.map(f=>row(f,false)).join('')}<h3 class="cf-section">Мои ленты</h3>${state.custom.length?state.custom.map(f=>row(f,true)).join(''):'<p class="cf-hint">Здесь будут ваши персональные подборки.</p>'}</div><footer class="cf-foot"><button class="cf-primary cf-secondary" data-action="create">Создать свою ленту</button></footer>`;
@@ -167,8 +168,8 @@
   function editor(id) {
     const existing=state.custom.find(f=>f.id===id);
     draft=existing?{...existing,sources:[...existing.sources]}:{name:'',sources:[],icon:'bookmark'};
-    dialog.innerHTML=head(existing?'Редактировать ленту':'Новая лента',true)+`<form id="cf-form"><div class="cf-body"><label class="cf-label" for="cf-name">Название</label><div class="cf-name-row">${variant===1?`<button type="button" class="cf-icon cf-name-icon" data-action="pick-icon" aria-label="Выбрать иконку ленты" aria-expanded="false" aria-controls="cf-icon-popover">${iconSVG(draft.icon)}</button>`:''}<div class="cf-name-control"><input class="cf-input" id="cf-name" placeholder="Название ленты" maxlength="40" required value="${esc(draft.name)}" aria-describedby="cf-name-count"><span class="cf-count" id="cf-name-count" aria-label="Осталось символов">${40-draft.name.length}</span></div></div>${variant===1?'<div class="cf-icon-popover" id="cf-icon-popover" popover="auto" role="group" aria-label="Иконка ленты"><div class="cf-icon-grid"></div></div>':''}<div class="cf-source-picker"><input class="cf-input" id="cf-search" type="search" placeholder="Поиск авторов, тем и тегов" aria-label="Поиск авторов, тем и тегов"><div class="cf-segments" role="tablist" aria-label="Тип источников"><button type="button" role="tab" aria-selected="true" data-kind="topic">Темы</button><button type="button" role="tab" aria-selected="false" data-kind="author">Авторы</button><button type="button" role="tab" aria-selected="false" data-kind="tag">Теги</button></div><div id="cf-results"></div><div class="cf-error" role="alert"></div></div></div><footer class="cf-foot">${existing?'<button class="cf-danger" type="button" data-action="delete">Удалить ленту</button>':''}<button class="cf-primary" id="cf-save" type="submit">${existing?'Сохранить':'Создать ленту'}</button></footer></form>`;
-    updateSources();if(variant===1){renderIcons();$('#cf-icon-popover',dialog).addEventListener('toggle',event=>$('.cf-name-icon',dialog)?.setAttribute('aria-expanded',String(event.newState==='open')));$('.cf-body',dialog).addEventListener('scroll',()=>$('#cf-icon-popover',dialog)?.hidePopover());}$('#cf-name',dialog).focus();
+    dialog.innerHTML=head(existing?'Редактировать ленту':'Новая лента',true)+`<form id="cf-form"><div class="cf-body"><label class="cf-label" for="cf-name">Название</label><div class="cf-name-row">${variant!==2?`<button type="button" class="cf-icon cf-name-icon" data-action="pick-icon" aria-label="Выбрать иконку ленты" aria-expanded="false" aria-controls="cf-icon-popover">${iconSVG(draft.icon)}</button>`:''}<div class="cf-name-control"><input class="cf-input" id="cf-name" placeholder="Название ленты" maxlength="40" required value="${esc(draft.name)}" aria-describedby="cf-name-count"><span class="cf-count" id="cf-name-count" aria-label="Осталось символов">${40-draft.name.length}</span></div></div>${variant!==2?'<div class="cf-icon-popover" id="cf-icon-popover" popover="auto" role="group" aria-label="Иконка ленты"><div class="cf-icon-grid"></div></div>':''}<div class="cf-source-picker"><input class="cf-input" id="cf-search" type="search" placeholder="Поиск авторов, тем и тегов" aria-label="Поиск авторов, тем и тегов"><div class="cf-segments" role="tablist" aria-label="Тип источников"><button type="button" role="tab" aria-selected="true" data-kind="topic">Темы</button><button type="button" role="tab" aria-selected="false" data-kind="author">Авторы</button><button type="button" role="tab" aria-selected="false" data-kind="tag">Теги</button></div><div id="cf-results"></div><div class="cf-error" role="alert"></div></div></div><footer class="cf-foot">${existing?'<button class="cf-danger" type="button" data-action="delete">Удалить ленту</button>':''}<button class="cf-primary" id="cf-save" type="submit">${existing?'Сохранить':'Создать ленту'}</button></footer></form>`;
+    updateSources();if(variant!==2){renderIcons();$('#cf-icon-popover',dialog).addEventListener('toggle',event=>$('.cf-name-icon',dialog)?.setAttribute('aria-expanded',String(event.newState==='open')));$('.cf-body',dialog).addEventListener('scroll',()=>$('#cf-icon-popover',dialog)?.hidePopover());}$('#cf-name',dialog).focus();
     $('#cf-form',dialog).onsubmit=e=>{e.preventDefault();const name=draft.name.trim();if(!name||!draft.sources.length)return;if(all().some(f=>f.id!==draft.id&&f.name.toLocaleLowerCase()===name.toLocaleLowerCase())){$('.cf-error',dialog).textContent='Лента с таким названием уже существует';return;}const feed={id:draft.id||'custom:'+crypto.randomUUID(),name,icon:validIcon(draft.icon),sources:[...draft.sources]};const i=state.custom.findIndex(f=>f.id===feed.id);if(i<0){state.custom.push(feed);selectedVisible.push(feed.id);}else state.custom[i]=feed;state.visible=[...selectedVisible];if(i<0)state.active=feed.id;if(!state.visible.includes(state.active))state.active=null;save();renderFeed();manager();toast(i<0?'Лента создана':'Изменения сохранены');};
   }
   function updateSources() {
@@ -212,6 +213,19 @@
     edit.innerHTML='<svg class="icon icon--pen" width="24" height="24"><use href="#sprite-pen"></use></svg>';
     edit.onclick=openManager;myRow.append(edit);
   }
+  let addFeedButton=null;
+  if(variant===3){
+    [...otherSection.lastElementChild.children].forEach(item=>feedList.append(item));
+    otherSection.remove();
+    const ownSection=document.createElement('div');ownSection.className='sidebar__section cf-own-feeds-section';
+    sidebarTitle.querySelector('span').textContent='Свои ленты';
+    const ownContent=document.createElement('div');ownContent.className='sidebar__section-content';
+    ownContent.append(sidebarFeeds);
+    addFeedButton=document.createElement('button');addFeedButton.type='button';addFeedButton.className='sidebar-item cf-add-feed';
+    addFeedButton.innerHTML='<svg class="icon" width="24" height="24" aria-hidden="true"><use href="#sprite-plus"></use></svg><span class="sidebar-item__label">Добавить ленту</span>';
+    addFeedButton.onclick=openManager;ownContent.append(addFeedButton);
+    ownSection.append(sidebarTitle,ownContent);feedSection.after(ownSection);
+  }
   let collapsedSections = {};
   try { collapsedSections = JSON.parse(localStorage.getItem('vc-sidebar-sections-v1')) || {}; } catch {}
   sidebar?.querySelectorAll(':scope > .sidebar__section').forEach((section,index) => {
@@ -243,6 +257,7 @@
   });
 
   function renderSidebar() {
+    if(variant===3){const hasFeeds=state.visible.length>0;addFeedButton.hidden=hasFeeds;sidebarTitle.querySelector('.cf-sidebar-settings').hidden=!hasFeeds;}
     if(variant===2){
       const label=feedList?.querySelector('a[data-local-original-href="https://vc.ru/my"] .sidebar-item__label');
       if(label)label.textContent=state.visible.length>0?'Мои ленты':'Моя лента';
