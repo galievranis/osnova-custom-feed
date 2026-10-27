@@ -169,7 +169,10 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-name-control:hover { background: var(--theme-color-field-background-hover); border-color: var(--theme-color-field-border-hover); box-shadow: var(--theme-shadow-field); }
 .cf-name-control:focus-within { background: var(--theme-color-field-background-hover); border-color: var(--theme-color-field-border-active); box-shadow: var(--theme-shadow-field); }
 .cf-name-control .cf-input, .cf-name-control .cf-input:hover, .cf-name-control .cf-input:focus, .cf-dialog .cf-name-control .cf-input:focus-visible { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; outline: none; }
-.cf-name-icon { margin-left: -8px; }
+.cf-name-row { display: flex; align-items: center; gap: 12px; }
+.cf-name-row .cf-name-control { flex: 1; min-width: 0; }
+.cf-name-icon { margin: 0; width: 50px; height: 50px; background: var(--theme-color-button-minimal); }
+.cf-name-icon:hover { background: var(--theme-color-button-minimal-hover); }
 .cf-name-control .cf-count { flex-shrink: 0; margin: 0; color: var(--theme-color-text-secondary-light); font-variant-numeric: tabular-nums; }
 .cf-icon-popover { position: fixed; inset: auto; margin: 0; width: 250px; max-width: calc(100vw - 32px); max-height: min(248px,calc(100dvh - 32px)); padding: 8px; border: 0; border-radius: 10px; background: var(--theme-color-popover-background); color: var(--theme-color-text-primary); box-shadow: var(--theme-floating-shadow); overflow-y: auto; scrollbar-width: thin; }
 .cf-icon-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 4px; }
