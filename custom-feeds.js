@@ -93,7 +93,6 @@
   }
   sortLabel.onclick=()=>toggleSort(sortLabel);
   const viewedPosts=new Set();
-  const originalIndex=new Map(posts.map((p,i)=>[p,i]));
   const postPopularity=post=>{const buttons=post.querySelectorAll('button');const text=buttons[buttons.length-1]?.textContent.trim().replace(/\s/g,'').replace(',','.') || '0';return (parseFloat(text)||0)*(/k|к/i.test(text)?1000:1);};
   const sortPopup=document.createElement('div');sortPopup.className='cf-sort-popover';sortPopup.id='cf-sort-popover';sortPopup.setAttribute('popover','auto');sortPopup.setAttribute('role','menu');sortPopup.setAttribute('aria-label','Сортировка ленты');document.body.append(sortPopup);
   function renderSort(){sortPopup.innerHTML=sortOptions.map(([id,name])=>`<button type="button" role="menuitemradio" aria-checked="${feedSort===id}" data-sort="${id}"><span>${name}</span>${feedSort===id?'<svg class="icon" width="20" height="20" aria-hidden="true"><use href="#sprite-tick"></use></svg>':''}</button>`).join('');}
@@ -120,22 +119,24 @@
     const organic=posts.filter(p=>p.parentElement===list);
     const key=state.active || baseActive;
     if(key!==lastFeedKey){
+      const previousFirst=[...list.children].find(p=>p.classList.contains('content')&&!p.hidden);
       const shuffled=[...organic];
       for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
-      if(personal){
-        if(feedSort==='popular')shuffled.sort((a,b)=>postPopularity(b)-postPopularity(a));
-        else shuffled.sort((a,b)=>originalIndex.get(a)-originalIndex.get(b));
-      }
+      // Demo data: a fresh selection makes every feed switch visibly different.
+      const candidates=shuffled.filter(p=>p!==previousFirst);
+      const selection=candidates.slice(0,Math.min(candidates.length,6+Math.floor(Math.random()*4)));
+      if(personal && feedSort==='popular')selection.sort((a,b)=>postPopularity(b)-postPopularity(a));
+      const selected=new Set(selection);
+      const ordered=[...selection,...shuffled.filter(p=>!selected.has(p))];
       const slots=organic.map(p=>{const slot=document.createComment('post');p.replaceWith(slot);return slot;});
-      slots.forEach((slot,i)=>slot.replaceWith(shuffled[i]));
-      const size=Math.min(shuffled.length,8+Math.floor(Math.random()*5));
-      shuffled.forEach((p,i)=>{p.dataset.feedVisible=String(i<size);});
+      slots.forEach((slot,i)=>slot.replaceWith(ordered[i]));
+      ordered.forEach(p=>{p.dataset.feedVisible=String(selected.has(p));});
       lastFeedKey=key;
     }
     [...list.children].forEach(e=>{
       if(e===empty)return;
       const isPost=organic.includes(e);
-      const show=isPost ? (personal && feedSort==='viewed' ? viewedPosts.has(e) : e.dataset.feedVisible!=='false') : !personal;
+      const show=isPost ? (personal && feedSort==='viewed' ? viewedPosts.has(e) && e.dataset.feedVisible!=='false' : e.dataset.feedVisible!=='false') : !personal;
       e.hidden=!show;e.style.display=show?'':'none';
     });
     empty.hidden=!(personal && feedSort==='viewed' && !organic.some(p=>!p.hidden));
