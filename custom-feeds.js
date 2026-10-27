@@ -65,6 +65,7 @@
     }
   } catch {}
   const all = () => [...presets,...state.custom];
+  const personalFeedLabel=()=>variant===3?'Подписки':variant===2 && state.visible.length>0?'Мои ленты':'Моя лента';
   const save = () => {try {localStorage.setItem('vc-custom-feeds-v1',JSON.stringify(state));} catch {toast('Не удалось сохранить настройки в браузере');}};
   const toast = text => {document.querySelector('.cf-status')?.remove();const e=document.createElement('div');e.className='cf-status';e.role='status';e.textContent=text;document.body.append(e);setTimeout(()=>e.remove(),3000);};
   const navbar = $('.feed-sorting .navbar');
@@ -76,7 +77,7 @@
   const mobileNav=document.createElement('nav');mobileNav.className='cf-mobile-nav';mobileNav.setAttribute('aria-label','Ленты');$('.feed-sorting').before(mobileNav);
   function renderMobileNav(){
     const previousScroll=$('.cf-mobile-scroll',mobileNav)?.scrollLeft || 0;
-    const baseFeeds=[['https://vc.ru/popular','Популярное'],['https://vc.ru/new','Свежее'],['https://vc.ru/my','Подписки']];
+    const baseFeeds=[['https://vc.ru/popular','Популярное'],['https://vc.ru/new','Свежее'],['https://vc.ru/my',personalFeedLabel()]];
     mobileNav.innerHTML='<div class="cf-mobile-scroll" role="tablist" aria-label="Ленты">'+baseFeeds.map(([url,name])=>`<button type="button" role="tab" aria-selected="${!state.active && baseActive===url}" data-mobile-base="${url}">${name}</button>`).join('')+state.visible.map(id=>all().find(f=>f.id===id)).filter(Boolean).map(f=>`<button type="button" role="tab" aria-selected="${state.active===f.id}" data-mobile-feed="${esc(f.id)}">${esc(f.name)}</button>`).join('')+'</div><div class="cf-mobile-actions"><button type="button" class="cf-icon cf-sort-trigger cf-mobile-sort" aria-label="Сортировка ленты" aria-haspopup="menu" aria-controls="cf-sort-popover" aria-expanded="false"><svg class="icon" width="24" height="24" aria-hidden="true"><use href="#sprite-sort"></use></svg></button><button type="button" class="cf-icon cf-mobile-manage" aria-label="Настроить ленты" title="Добавить или настроить ленты"><svg class="icon" width="24" height="24" aria-hidden="true"><use href="#sprite-plus"></use></svg></button></div>';
     const scroll=$('.cf-mobile-scroll',mobileNav);scroll.scrollLeft=previousScroll;
     if(mobileNav.getBoundingClientRect().width){
@@ -279,7 +280,7 @@
   function renderSidebar() {
     if(variant===3){const hasFeeds=state.visible.length>0;addFeedButton.hidden=hasFeeds;sidebarTitle.querySelector('.cf-sidebar-settings').hidden=!hasFeeds;}
     const subscriptionsLabel=feedList?.querySelector('a[data-local-original-href="https://vc.ru/my"] .sidebar-item__label');
-    if(subscriptionsLabel)subscriptionsLabel.textContent='Подписки';
+    if(subscriptionsLabel)subscriptionsLabel.textContent=personalFeedLabel();
     sidebarFeeds.innerHTML = (variant===2 ? [] : state.visible).map(id=>all().find(f=>f.id===id)).filter(Boolean).map(f=>`<button type="button" class="sidebar-item cf-sidebar-feed ${state.active===f.id?'sidebar-item--active':''}" data-feed="${esc(f.id)}" ${state.active===f.id?'aria-current="page"':''} title="${esc(f.name)}">${iconSVG(f.icon)}<div class="sidebar-item__text"><span class="sidebar-item__label">${esc(f.name)}</span></div></button>`).join('');
     feedList?.querySelectorAll('a.sidebar-item').forEach(a=>{
       const active = (variant===2 || !state.active) && a.dataset.localOriginalHref===baseActive;
