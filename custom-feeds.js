@@ -84,13 +84,20 @@
   if(variant===2 && state.active)baseActive='https://vc.ru/my';
   const sortOptions=[['date','По дате'],['popular','По популярности'],['viewed','Просмотренные']];
   let feedSort='date';
+  const sortLabel=document.createElement('button');sortLabel.type='button';sortLabel.className='cf-sort-trigger cf-sort-label';sortLabel.hidden=true;sortLabel.setAttribute('aria-haspopup','menu');sortLabel.setAttribute('aria-controls','cf-sort-popover');sortLabel.setAttribute('aria-expanded','false');
+  $('.feed-sorting__desktop')?.append(sortLabel);
+  function toggleSort(button,alignRight=false){
+    if(sortPopup.matches(':popover-open'))sortPopup.hidePopover();
+    else {renderSort();sortPopup.showPopover();const anchor=button.getBoundingClientRect();sortPopup.style.left=Math.max(16,Math.min(alignRight?anchor.right-sortPopup.offsetWidth:anchor.left,innerWidth-sortPopup.offsetWidth-16))+'px';sortPopup.style.top=Math.max(16,Math.min(anchor.bottom+8,innerHeight-sortPopup.offsetHeight-16))+'px';}
+  }
+  sortLabel.onclick=()=>toggleSort(sortLabel);
   const viewedPosts=new Set();
   const originalIndex=new Map(posts.map((p,i)=>[p,i]));
   const postPopularity=post=>{const buttons=post.querySelectorAll('button');const text=buttons[buttons.length-1]?.textContent.trim().replace(/\s/g,'').replace(',','.') || '0';return (parseFloat(text)||0)*(/k|к/i.test(text)?1000:1);};
   const sortPopup=document.createElement('div');sortPopup.className='cf-sort-popover';sortPopup.id='cf-sort-popover';sortPopup.setAttribute('popover','auto');sortPopup.setAttribute('role','menu');sortPopup.setAttribute('aria-label','Сортировка ленты');document.body.append(sortPopup);
   function renderSort(){sortPopup.innerHTML=sortOptions.map(([id,name])=>`<button type="button" role="menuitemradio" aria-checked="${feedSort===id}" data-sort="${id}"><span>${name}</span>${feedSort===id?'<svg class="icon" width="20" height="20" aria-hidden="true"><use href="#sprite-tick"></use></svg>':''}</button>`).join('');}
-  sortPopup.onclick=event=>{const option=event.target.closest('[data-sort]');if(option){feedSort=option.dataset.sort;sortPopup.hidePopover();lastFeedKey=null;renderFeed();$('.cf-sort-trigger').focus();}};
-  sortPopup.addEventListener('toggle',event=>$('.cf-sort-trigger')?.setAttribute('aria-expanded',String(event.newState==='open')));
+  sortPopup.onclick=event=>{const option=event.target.closest('[data-sort]');if(option){feedSort=option.dataset.sort;sortPopup.hidePopover();lastFeedKey=null;renderFeed();(variant===1?sortLabel:$('.cf-variant-tabs .cf-sort-trigger'))?.focus();}};
+  sortPopup.addEventListener('toggle',event=>document.querySelectorAll('.cf-sort-trigger').forEach(button=>button.setAttribute('aria-expanded',String(event.newState==='open'))));
   let lastFeedKey = null;
   function renderFeed() {
 
@@ -104,6 +111,9 @@
 
     const feed=all().find(f=>f.id===state.active);
     const personal = Boolean(feed) || baseActive === 'https://vc.ru/my';
+    document.documentElement.classList.toggle('cf-personal-v1',variant===1 && personal);
+    sortLabel.hidden=!(variant===1 && personal);
+    sortLabel.innerHTML=`<span>${sortOptions.find(([id])=>id===feedSort)[1]}</span><svg class="icon cf-sort-chevron" width="16" height="16" aria-hidden="true"><use href="#sprite-chevron_down"></use></svg>`;
     document.querySelectorAll('.feed-page__news,.feed-page__seen-posts-count').forEach(e=>{e.hidden=personal;e.style.display=personal?'none':'';});
     const list=$('.content-list');
     const organic=posts.filter(p=>p.parentElement===list);
@@ -111,7 +121,7 @@
     if(key!==lastFeedKey){
       const shuffled=[...organic];
       for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
-      if(personalTabs){
+      if(personal){
         if(feedSort==='popular')shuffled.sort((a,b)=>postPopularity(b)-postPopularity(a));
         else shuffled.sort((a,b)=>originalIndex.get(a)-originalIndex.get(b));
       }
@@ -124,10 +134,10 @@
     [...list.children].forEach(e=>{
       if(e===empty)return;
       const isPost=organic.includes(e);
-      const show=isPost ? (personalTabs && feedSort==='viewed' ? viewedPosts.has(e) : e.dataset.feedVisible!=='false') : !personal;
+      const show=isPost ? (personal && feedSort==='viewed' ? viewedPosts.has(e) : e.dataset.feedVisible!=='false') : !personal;
       e.hidden=!show;e.style.display=show?'':'none';
     });
-    empty.hidden=!(personalTabs && feedSort==='viewed' && !organic.some(p=>!p.hidden));
+    empty.hidden=!(personal && feedSort==='viewed' && !organic.some(p=>!p.hidden));
     if(!empty.hidden)empty.innerHTML='<h3>Нет просмотренных постов</h3>';
     organic.filter(p=>!p.hidden).forEach(p=>viewedPosts.add(p));
     organic.forEach(p=>p.classList.remove('cf-first-post'));
@@ -138,8 +148,7 @@
   variantTabs.onclick=event=>{
     const sortButton=event.target.closest('.cf-sort-trigger');
     if(sortButton){
-      if(sortPopup.matches(':popover-open'))sortPopup.hidePopover();
-      else {renderSort();sortPopup.showPopover();const anchor=sortButton.getBoundingClientRect();sortPopup.style.left=Math.max(16,Math.min(anchor.right-sortPopup.offsetWidth,innerWidth-sortPopup.offsetWidth-16))+'px';sortPopup.style.top=Math.min(anchor.bottom+8,innerHeight-sortPopup.offsetHeight-16)+'px';}
+      toggleSort(sortButton,true);
       return;
     }
     const button=event.target.closest('[data-personal-feed]');
