@@ -226,3 +226,11 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
   .cf-mobile-nav button:focus-visible{outline:2px solid var(--cf-blue);outline-offset:-2px}
 }
 .cf-mobile-manage { order: -1; }
+.cf-tabs-viewport{position:relative;flex:1;min-width:0}
+.cf-feed-tabs-scroll{scrollbar-width:none}
+.cf-feed-tabs-scroll::-webkit-scrollbar{display:none}
+.cf-variant-tabs .cf-tabs-arrow{position:absolute;top:0;bottom:3px;width:30px;height:calc(100% - 3px);padding:0;border:0;border-radius:0;display:grid;place-items:center;z-index:1;color:var(--theme-color-text-secondary);cursor:pointer}
+.cf-variant-tabs .cf-tabs-arrow[hidden]{display:none}
+.cf-tabs-arrow-left{left:0;background:linear-gradient(to right,var(--theme-color-background-content) 65%,transparent)!important}
+.cf-tabs-arrow-right{right:0;background:linear-gradient(to left,var(--theme-color-background-content) 65%,transparent)!important}
+.cf-variant-tabs .cf-tabs-arrow:hover{color:var(--theme-color-text-primary)}

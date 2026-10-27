@@ -127,8 +127,12 @@
     const tabFeeds=state.visible.map(id=>all().find(f=>f.id===id)).filter(Boolean);
     variantTabs.hidden=!personalTabs;
     document.documentElement.classList.toggle('cf-personal-v2',personalTabs);
-    variantTabs.innerHTML=personalTabs ? `<div class="cf-feed-tabs-scroll" role="tablist" aria-label="Ленты"><button type="button" role="tab" aria-selected="${!state.active}" data-personal-feed="">Подписки</button>`+tabFeeds.map(f=>`<button type="button" role="tab" aria-selected="${state.active===f.id}" data-personal-feed="${esc(f.id)}">${esc(f.name)}</button>`).join('')+'</div><button type="button" class="cf-icon cf-sort-trigger" aria-label="Сортировка ленты" aria-haspopup="menu" aria-expanded="false" aria-controls="cf-sort-popover"><svg class="icon" width="24" height="24" aria-hidden="true"><use href="#sprite-sort"></use></svg></button>' : '';
+    const savedTabOffset=$('.cf-feed-tabs-scroll',variantTabs)?.scrollLeft || 0;
+    variantTabs.innerHTML=personalTabs ? `<div class="cf-tabs-viewport"><button type="button" class="cf-tabs-arrow cf-tabs-arrow-left" data-scroll-tabs="-1" aria-label="Прокрутить ленты влево"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#sprite-chevron_left"></use></svg></button><div class="cf-feed-tabs-scroll" role="tablist" aria-label="Ленты"><button type="button" role="tab" aria-selected="${!state.active}" data-personal-feed="">Подписки</button>`+tabFeeds.map(f=>`<button type="button" role="tab" aria-selected="${state.active===f.id}" data-personal-feed="${esc(f.id)}">${esc(f.name)}</button>`).join('')+'</div><button type="button" class="cf-tabs-arrow cf-tabs-arrow-right" data-scroll-tabs="1" aria-label="Прокрутить ленты вправо"><svg class="icon" width="16" height="16" aria-hidden="true"><use href="#sprite-chevron_right"></use></svg></button></div><button type="button" class="cf-icon cf-sort-trigger" aria-label="Сортировка ленты" aria-haspopup="menu" aria-expanded="false" aria-controls="cf-sort-popover"><svg class="icon" width="24" height="24" aria-hidden="true"><use href="#sprite-sort"></use></svg></button>' : '';
 
+    const tabScroll=$('.cf-feed-tabs-scroll',variantTabs);
+    if(tabScroll){tabScroll.scrollLeft=savedTabOffset;tabScroll.addEventListener('scroll',updateTabScrollHints,{passive:true});}
+    updateTabScrollHints();
     const feed=all().find(f=>f.id===state.active);
     const personal = Boolean(feed) || baseActive === 'https://vc.ru/my';
     document.documentElement.classList.toggle('cf-personal-v1',variant!==2 && personal);
@@ -167,7 +171,18 @@
     navbar.querySelectorAll('.tabs__tab').forEach(t=>t.classList.toggle('tabs__tab--active',(variant===2 || !feed) && t.dataset.localOriginalHref===baseActive));
   }
 
+  function updateTabScrollHints(){
+    const scroll=$('.cf-feed-tabs-scroll',variantTabs),wrap=$('.cf-tabs-viewport',variantTabs);
+    if(!scroll||!wrap)return;
+    const left=scroll.scrollLeft>1,right=scroll.scrollWidth-scroll.clientWidth-scroll.scrollLeft>1;
+    wrap.classList.toggle('cf-can-scroll-left',left);wrap.classList.toggle('cf-can-scroll-right',right);
+    $('.cf-tabs-arrow-left',wrap).hidden=!left;$('.cf-tabs-arrow-right',wrap).hidden=!right;
+  }
+  new ResizeObserver(updateTabScrollHints).observe(variantTabs);
   variantTabs.onclick=event=>{
+    const arrow=event.target.closest('[data-scroll-tabs]');
+    if(arrow){const scroll=$('.cf-feed-tabs-scroll',variantTabs);scroll.scrollBy({left:Number(arrow.dataset.scrollTabs)*Math.max(140,scroll.clientWidth*.7),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});return;}
+
     const sortButton=event.target.closest('.cf-sort-trigger');
     if(sortButton){
       toggleSort(sortButton,true);
