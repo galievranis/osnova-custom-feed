@@ -211,3 +211,4 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-add-feed{width:100%;border:0;background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .cf-add-feed:hover{background:var(--theme-color-background-content)}
 .cf-add-feed[hidden],.cf-sidebar-settings[hidden]{display:none}
+.cf-sidebar-feed.sidebar-item--active { background: var(--theme-color-background-content); }
