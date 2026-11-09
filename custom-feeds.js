@@ -12,11 +12,9 @@
     {id:'author:Joe cocker',name:'Joe cocker',image:'./feed-assets/source-4.webp'}
   ].filter(author=>!authors.some(existing=>existing.id===author.id)));
   const authorIds=authors.map(author=>author.id);
-  const trends=['Сенсорный MacBook Pro','Взлом холодильников','Кибератака на Beget','OpenAI лимиты Pro','Gemini 4 Carbon','Взлом Binance'];
-  const trendWidget=document.createElement('section');
-  trendWidget.className='cf-trends';
-  trendWidget.innerHTML='<h2>Тренды</h2><ul>'+trends.map(name=>`<li>${esc(name)}</li>`).join('')+'</ul>';
-  $('.sticky-stack-sidebar-section')?.prepend(trendWidget);
+  const trends=['Сенсорный MacBook Pro','Взлом холодильников','Кибератака на Beget','OpenAI лимиты Pro','Gemini 4 Carbon','Взлом Binance']
+    .map(name=>({id:'trend:'+name,name}));
+  const sourceIds=new Set([...authorIds,...trends.map(trend=>trend.id)]);
 
   const outlineIcons = {
     bookmark: ['Закладка','M6 4h12v17l-6-4-6 4z'],
@@ -159,7 +157,16 @@
   let draft, opener, reordering=false;
   const uiIcon=(name,size=24)=>`<svg class="icon" width="${size}" height="${size}" aria-hidden="true"><use href="#sprite-${name}"></use></svg>`;
   const head=(title,back=false,actions='')=>`<header class="cf-head">${back?`<button class="cf-icon" data-action="back" aria-label="Назад">${uiIcon('back',22)}</button>`:''}<h2 id="cf-title">${title}</h2>${actions}<button class="cf-icon" data-action="close" aria-label="Закрыть">${uiIcon('cross',22)}</button></header>`;
-  const authorCount = n => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'автор' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'автора' : 'авторов');
+  const pluralCount = (n,[one,few,many]) => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many);
+  function feedSourceCount(feed) {
+    const selected=feed.sources.filter(id=>sourceIds.has(id));
+    const authors=selected.filter(id=>authorIds.includes(id)).length;
+    const trendCount=selected.length-authors;
+    return [
+      authors || !trendCount ? pluralCount(authors,['автор','автора','авторов']) : '',
+      trendCount ? pluralCount(trendCount,['тренд','тренда','трендов']) : ''
+    ].filter(Boolean).join(' · ');
+  }
   const isCustom = feed => feed.id.startsWith('custom:');
   const gripIcon = '<svg class="icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="7" cy="4" r="1.5"/><circle cx="13" cy="4" r="1.5"/><circle cx="7" cy="10" r="1.5"/><circle cx="13" cy="10" r="1.5"/><circle cx="7" cy="16" r="1.5"/><circle cx="13" cy="16" r="1.5"/></svg>';
   function feedRow(feed, before, after) {
@@ -170,7 +177,7 @@
     const actions=reordering
       ? `<div class="cf-move-actions">${move(-1,before)}${move(1,after)}</div><button type="button" class="cf-icon cf-grip" ${before||after?'':'disabled'} aria-label="Переместить «${name}»" aria-describedby="cf-reorder-help" aria-keyshortcuts="ArrowUp ArrowDown" title="Перетащить">${gripIcon}</button>`
       : `${custom?`<button class="cf-icon" data-edit="${id}" aria-label="Редактировать ${name}">${uiIcon('pen')}</button>`:''}<input class="cf-check" type="checkbox" id="cf-${id}" data-visible="${id}" ${state.visible.includes(feed.id)?'checked':''} aria-label="Показывать ${name}">`;
-    return `<li class="cf-row" data-feed-row="${id}"><div class="cf-feed-icon">${iconSVG(feed.icon)}</div><label class="cf-info" ${reordering?'':`for="cf-${id}"`}><div class="cf-name">${name}</div><div class="cf-sub">${esc(custom?authorCount(feed.sources.filter(id=>authorIds.includes(id)).length):feed.description)}</div></label><div class="cf-row-actions">${actions}</div></li>`;
+    return `<li class="cf-row" data-feed-row="${id}"><div class="cf-feed-icon">${iconSVG(feed.icon)}</div><label class="cf-info" ${reordering?'':`for="cf-${id}"`}><div class="cf-name">${name}</div><div class="cf-sub">${esc(custom?feedSourceCount(feed):feed.description)}</div></label><div class="cf-row-actions">${actions}</div></li>`;
   }
   function renderManagerRows() {
     const feeds=orderedFeeds();
@@ -273,7 +280,7 @@
   });
   function editor(id) {
     const existing=state.custom.find(f=>f.id===id);
-    draft=existing?{...existing,sources:[...new Set(existing.sources.filter(id=>authorIds.includes(id)))]}:{name:'',sources:[],icon:'bookmark'};
+    draft=existing?{...existing,sources:[...new Set(existing.sources.filter(id=>sourceIds.has(id)))]}:{name:'',sources:[],icon:'bookmark'};
     dialog.innerHTML=head(existing?'Редактировать ленту':'Новая лента',true)+`
       <form id="cf-form">
         <div class="cf-body">
@@ -284,10 +291,20 @@
           </div>
           <div class="cf-icon-popover" id="cf-icon-popover" popover="auto" role="group" aria-label="Иконка ленты"><div class="cf-icon-grid"></div></div>
           <div class="cf-source-picker">
-            <label class="cf-label" for="cf-search">Авторы</label>
-            <input class="cf-input" id="cf-search" type="search" placeholder="Поиск авторов" aria-label="Поиск авторов">
-            <button type="button" class="cf-primary cf-secondary cf-select-authors" data-action="select-authors">Выбрать всех авторов</button>
-            <div id="cf-results"></div>
+            <div class="cf-source-switch" role="group" aria-label="Источники ленты">
+              <button type="button" data-source-view="authors" aria-pressed="true" aria-controls="cf-author-panel">Авторы</button>
+              <button type="button" data-source-view="trends" aria-pressed="false" aria-controls="cf-trend-panel">Тренды</button>
+            </div>
+            <div id="cf-author-panel">
+              <input class="cf-input" id="cf-search" type="search" placeholder="Поиск авторов" aria-label="Поиск авторов">
+              <button type="button" class="cf-primary cf-secondary cf-select-authors" data-action="select-authors">Выбрать всех авторов</button>
+              <div id="cf-results"></div>
+            </div>
+            <div id="cf-trend-panel" hidden>
+              <div class="cf-trend-options" role="group" aria-label="Тренды">
+                ${trends.map(trend=>`<label class="cf-trend-option"><input type="checkbox" data-source="${esc(trend.id)}" ${draft.sources.includes(trend.id)?'checked':''}><span>${esc(trend.name)}</span></label>`).join('')}
+              </div>
+            </div>
             <div class="cf-error" role="alert"></div>
           </div>
         </div>
@@ -324,7 +341,7 @@
     };
   }
   function updateEditorControls() {
-    $('[data-action="select-authors"]',dialog).disabled=draft.sources.length===authors.length;
+    $('[data-action="select-authors"]',dialog).disabled=authorIds.every(id=>draft.sources.includes(id));
     $('#cf-save',dialog).disabled=!draft.name.trim()||!draft.sources.length;
   }
   function updateSources() {
@@ -453,8 +470,13 @@
       renderManagerRows();
     }
     if(b.dataset.move)moveFeed(b.closest('[data-feed-row]').dataset.feedRow,Number(b.dataset.move),`[data-move="${b.dataset.move}"]:enabled`);
+    if(b.dataset.sourceView){
+      dialog.querySelectorAll('[data-source-view]').forEach(button=>button.setAttribute('aria-pressed',String(button===b)));
+      $('#cf-author-panel',dialog).hidden=b.dataset.sourceView!=='authors';
+      $('#cf-trend-panel',dialog).hidden=b.dataset.sourceView!=='trends';
+    }
     if(b.dataset.action==='select-authors'){
-      draft.sources=[...authorIds];
+      draft.sources=[...new Set([...draft.sources,...authorIds])];
       updateSources();
       $('[data-source]',dialog)?.focus();
     }
