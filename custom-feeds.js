@@ -307,7 +307,7 @@
           </div>
         </div>
         <footer class="cf-foot">
-          <button class="cf-primary" id="cf-save" type="submit">${existing?'Сохранить':'Создать ленту'}</button>
+          <button class="cf-primary" id="cf-save" type="submit">Сохранить</button>
           ${existing?'<button class="cf-danger" type="button" data-action="delete">Удалить ленту</button>':''}
         </footer>
       </form>`;
