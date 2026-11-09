@@ -65,11 +65,11 @@
     }
   } catch {}
   const all = () => [...presets,...state.custom];
-  const orderedFeeds = () => [presets,state.custom].flatMap(group => {
-    const byId = new Map(group.map(feed=>[feed.id,feed]));
+  const orderedFeeds = () => {
+    const byId = new Map(all().map(feed=>[feed.id,feed]));
     const ids = [...new Set([...state.order,...byId.keys()])];
     return ids.map(id=>byId.get(id)).filter(Boolean);
-  });
+  };
   const visibleFeeds = () => orderedFeeds().filter(feed=>state.visible.includes(feed.id));
   const save = () => {try {localStorage.setItem('vc-custom-feeds-v1',JSON.stringify(state));} catch {toast('Не удалось сохранить настройки в браузере');}};
   const toast = text => {document.querySelector('.cf-status')?.remove();const e=document.createElement('div');e.className='cf-status';e.role='status';e.textContent=text;document.body.append(e);setTimeout(()=>e.remove(),3000);};
@@ -182,8 +182,7 @@
   function renderManagerRows() {
     const feeds=orderedFeeds();
     $('.cf-feed-list',dialog).innerHTML=feeds.map((feed,index)=>feedRow(feed,
-      index>0 && isCustom(feeds[index-1])===isCustom(feed),
-      index<feeds.length-1 && isCustom(feeds[index+1])===isCustom(feed))).join('');
+      index>0,index<feeds.length-1)).join('');
   }
   function manager() {
     draft=null;
@@ -196,7 +195,7 @@
     const feeds=orderedFeeds();
     const from=feeds.findIndex(feed=>feed.id===id);
     const to=from+offset;
-    if (from<0 || !offset || !feeds[to] || isCustom(feeds[from])!==isCustom(feeds[to])) return;
+    if (from<0 || !offset || !feeds[to]) return;
     const motion=!matchMedia('(prefers-reduced-motion: reduce)').matches;
     const previousTops=new Map();
     if(motion){
@@ -253,7 +252,6 @@
 
     const target=document.elementFromPoint(event.clientX,event.clientY)?.closest('[data-feed-row]');
     if(!target || target.parentElement!==drag.row.parentElement)return;
-    if(target.dataset.feedRow.startsWith('custom:')!==drag.row.dataset.feedRow.startsWith('custom:'))return;
     const rows=[...target.parentElement.children];
     const from=rows.indexOf(drag.row), to=rows.indexOf(target);
     const bounds=target.getBoundingClientRect();
