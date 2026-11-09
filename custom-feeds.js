@@ -341,7 +341,8 @@
     };
   }
   function updateEditorControls() {
-    $('[data-action="select-authors"]',dialog).disabled=authorIds.every(id=>draft.sources.includes(id));
+    const allSelected=authorIds.every(id=>draft.sources.includes(id));
+    $('[data-action="select-authors"]',dialog).textContent=allSelected?'Снять выбор со всех авторов':'Выбрать всех авторов';
     $('#cf-save',dialog).disabled=!draft.name.trim()||!draft.sources.length;
   }
   function updateSources() {
@@ -476,9 +477,11 @@
       $('#cf-trend-panel',dialog).hidden=b.dataset.sourceView!=='trends';
     }
     if(b.dataset.action==='select-authors'){
-      draft.sources=[...new Set([...draft.sources,...authorIds])];
+      const allSelected=authorIds.every(id=>draft.sources.includes(id));
+      draft.sources=allSelected
+        ? draft.sources.filter(id=>!authorIds.includes(id))
+        : [...new Set([...draft.sources,...authorIds])];
       updateSources();
-      $('[data-source]',dialog)?.focus();
     }
 
     if(b.dataset.action==='delete'){

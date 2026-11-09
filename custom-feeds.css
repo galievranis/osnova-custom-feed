@@ -209,7 +209,7 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
   .cf-move { position: relative; width: 44px; height: 36px; }
   .cf-move::before { content: ''; position: absolute; inset: -4px 0; }
 }
-.cf-select-authors { margin: 12px 0 4px; }
+.cf-select-authors { margin: 12px 0 4px; font-size: 15px; }
 .cf-source-switch, .cf-trend-options { display: flex; flex-wrap: wrap; gap: 8px; }
 .cf-source-switch { margin-bottom: 12px; }
 .cf-source-switch button, .cf-trend-option span {
