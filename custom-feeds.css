@@ -10,7 +10,7 @@
 html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-dialog, .cf-dialog * { box-sizing: border-box; }
 .cf-dialog { font-family: Roboto, system-ui, sans-serif; }
-.cf-trigger, .cf-primary, .cf-danger, .cf-icon, .cf-icon-option,
+.cf-trigger, .cf-primary, .cf-icon, .cf-icon-option,
 .cf-sidebar-feed, .cf-section-toggle { font-family: inherit; cursor: pointer; }
 .cf-dialog button:focus-visible, .cf-trigger:focus-visible, .cf-sidebar-feed:focus-visible,
 .cf-section-toggle:focus-visible {
@@ -44,8 +44,6 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-primary:hover:not(:disabled) { background: var(--cf-blue-hover); }
 .cf-primary:active:not(:disabled) { background: var(--cf-blue-pressed); }
 .cf-primary:disabled { opacity: .5; cursor: default; }
-.cf-danger { min-height: 42px; padding: 0 14px; border-radius: 42px; border: 0; background: none; color: var(--theme-color-signal-negative-default); font-size: 13px; line-height: 18px; }
-.cf-danger:hover { color: var(--theme-color-signal-negative-dark); }
 
 /* Lists and fields. */
 .cf-row { display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 7px 0; }
@@ -55,7 +53,8 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-info { flex: 1; min-width: 0; }
 .cf-name { font-size: 15px; line-height: 22px; font-weight: 400; overflow-wrap: anywhere; }
 .cf-sub { font-size: 13px; line-height: 18px; color: var(--theme-color-text-secondary); margin-top: 2px; }
-.cf-feed-icon { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; color: var(--theme-color-text-secondary); }
+.cf-feed-icon { display: grid; place-items: center start; width: 24px; height: 36px; flex-shrink: 0; color: var(--theme-color-text-secondary); }
+.cf-feed-icon > .icon { margin-inline-start: -3px; }
 .cf-check { appearance: none; display: grid; place-content: center; width: 18px; height: 18px; flex-shrink: 0; margin: 0; border-radius: 5px; border: 1px solid var(--theme-color-field-border-default); background: var(--theme-color-check-background-default); cursor: pointer; }
 .cf-check:hover, .cf-check:focus-visible { border-color: var(--cf-blue-border); box-shadow: var(--theme-shadow-field); }
 .cf-check:checked { border-color: var(--cf-blue); background-color: var(--cf-blue); background-image: url('./feed-assets/tick.svg'); background-repeat: no-repeat; background-position: center; background-size: 16px; }
@@ -71,7 +70,6 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-hint { margin: 20px 0; }
 .cf-error { color: var(--theme-color-signal-negative-default); font-size: 13px; line-height: 18px; margin-top: 4px; }
 .cf-error:empty { display: none; }
-.cf-outline-icon, .cf-outline-icon path { fill: none !important; stroke: currentColor; }
 
 /* Sidebar: custom structure is intentional; geometry follows the shared system. */
 .sidebar { display: grid; row-gap: 26px; padding-left: 10px; padding-right: 8px; }
@@ -88,6 +86,8 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-sidebar-feeds { display: grid; gap: 4px; min-width: 0; }
 .cf-sidebar-feeds:empty, .cf-sidebar-feeds[hidden], .sidebar__section-content[hidden] { display: none; }
 .cf-sidebar-feed { width: 100%; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; }
+.cf-sidebar-feed > .icon { color: var(--theme-color-text-secondary); }
+.cf-sidebar-feed-mask { width: 24px; height: 24px; background: currentColor; mask: var(--cf-icon-mask) center / contain no-repeat; }
 .cf-sidebar-feed .sidebar-item__text { min-width: 0; }
 .cf-sidebar-feed .sidebar-item__label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cf-section-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
@@ -134,6 +134,8 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
 .cf-secondary { background: var(--theme-color-button-minimal); color: var(--theme-color-text-primary); box-shadow: none; }
 .cf-secondary:hover:not(:disabled) { background: var(--theme-color-button-minimal-hover); box-shadow: none; }
 .cf-secondary:active:not(:disabled) { background: var(--theme-color-button-minimal-active); box-shadow: none; }
+.cf-danger { color: var(--theme-color-signal-negative-default); }
+.cf-danger:hover { color: var(--theme-color-signal-negative-dark); }
 .cf-name-control { display: flex; align-items: center; gap: 6px; height: 50px; padding: 0 15px; border: 1px solid var(--theme-color-field-border-default); border-radius: 12px; background: var(--theme-color-field-background-default); }
 .cf-name-control:hover { background: var(--theme-color-field-background-hover); border-color: var(--theme-color-field-border-hover); box-shadow: var(--theme-shadow-field); }
 .cf-name-control:focus-within { background: var(--theme-color-field-background-hover); border-color: var(--theme-color-field-border-active); box-shadow: var(--theme-shadow-field); }
@@ -209,13 +211,13 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
   .cf-move { position: relative; width: 44px; height: 36px; }
   .cf-move::before { content: ''; position: absolute; inset: -4px 0; }
 }
-.cf-select-authors { margin: 12px 0 4px; font-size: 15px; }
-.cf-source-switch, .cf-trend-options { display: flex; flex-wrap: wrap; gap: 8px; }
-.cf-source-switch { margin-bottom: 12px; }
-.cf-source-switch button, .cf-trend-option span {
+.cf-select-sources { margin: 12px 0 4px; font-size: 15px; }
+.cf-source-switch { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.cf-source-switch button {
   display: block;
   padding: 5px 11px;
   border: 1px solid var(--theme-color-border);
+  border-radius: 10px;
   background: var(--theme-color-background-content);
   color: var(--theme-color-text-primary);
   font: inherit;
@@ -223,12 +225,7 @@ html:has(.cf-dialog[open]) { overflow: hidden; }
   line-height: 22px;
   cursor: pointer;
 }
-.cf-source-switch button { border-radius: 10px; }
-.cf-source-switch button[aria-pressed=true], .cf-trend-option input:checked + span {
+.cf-source-switch button[aria-pressed=true] {
   border-color: var(--cf-blue);
   background: var(--cf-blue-soft);
 }
-.cf-trend-option { position: relative; max-width: 100%; }
-.cf-trend-option span { border-radius: 20px; overflow-wrap: anywhere; }
-.cf-trend-option input { position: absolute; width: 1px; height: 1px; margin: 0; clip-path: inset(50%); }
-.cf-trend-option input:focus-visible + span { outline: 2px solid var(--cf-blue); outline-offset: 2px; }
