@@ -173,6 +173,7 @@
   navbar.querySelectorAll('.tabs__tab').forEach(t=>t.addEventListener('click',e=>{e.preventDefault();baseActive=t.dataset.localOriginalHref || 'https://vc.ru/popular';state.active=null;save();renderFeed();navbar.querySelectorAll('.tabs__tab').forEach(x=>x.classList.toggle('tabs__tab--active',x===t));}));
   const dialog=document.createElement('dialog');dialog.className='cf-dialog';dialog.setAttribute('aria-labelledby','cf-title');document.body.append(dialog);
   let draft, opener, reordering=false;
+  let pendingVisible=new Set();
   const uiIcon=(name,size=24)=>`<svg class="icon" width="${size}" height="${size}" aria-hidden="true"><use href="#sprite-${name}"></use></svg>`;
   const head=(title,back=false,actions='')=>`<header class="cf-head">${back?`<button class="cf-icon" data-action="back" aria-label="Назад">${uiIcon('back',22)}</button>`:''}<h2 id="cf-title">${title}</h2>${actions}<button class="cf-icon" data-action="close" aria-label="Закрыть">${uiIcon('cross',22)}</button></header>`;
   const pluralCount = (n,[one,few,many]) => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many);
@@ -194,7 +195,7 @@
     const move=(direction,enabled)=>`<button type="button" class="cf-icon cf-move" data-move="${direction}" aria-label="Переместить «${name}» ${direction<0?'вверх':'вниз'}" ${enabled?'':'disabled'}>${uiIcon(direction<0?'chevron_up':'chevron_down',20)}</button>`;
     const actions=reordering
       ? `<div class="cf-move-actions">${move(-1,before)}${move(1,after)}</div><button type="button" class="cf-icon cf-grip" ${before||after?'':'disabled'} aria-label="Переместить «${name}»" aria-describedby="cf-reorder-help" aria-keyshortcuts="ArrowUp ArrowDown" title="Перетащить">${gripIcon}</button>`
-      : `${custom?`<button class="cf-icon" data-edit="${id}" aria-label="Редактировать ${name}">${uiIcon('pen')}</button>`:''}<input class="cf-check" type="checkbox" id="cf-${id}" data-visible="${id}" ${state.visible.includes(feed.id)?'checked':''} aria-label="Показывать ${name}">`;
+      : `${custom?`<button class="cf-icon" data-edit="${id}" aria-label="Редактировать ${name}">${uiIcon('pen')}</button>`:''}<input class="cf-check" type="checkbox" id="cf-${id}" data-visible="${id}" ${pendingVisible.has(feed.id)?'checked':''} aria-label="Показывать ${name}">`;
     return `<li class="cf-row" data-feed-row="${id}"><div class="cf-feed-icon">${iconImage(feedIconId(feed))}</div><label class="cf-info" ${reordering?'':`for="cf-${id}"`}><div class="cf-name">${name}</div><div class="cf-sub">${esc(custom?feedSourceCount(feed):feed.description)}</div></label><div class="cf-row-actions">${actions}</div></li>`;
   }
   function renderManagerRows() {
@@ -202,11 +203,22 @@
     $('.cf-feed-list',dialog).innerHTML=feeds.map((feed,index)=>feedRow(feed,
       index>0,index<feeds.length-1)).join('');
   }
+  function visibilityChanged() {
+    return pendingVisible.size!==state.visible.length || state.visible.some(id=>!pendingVisible.has(id));
+  }
   function manager() {
     draft=null;
     reordering=false;
     const reorder=`<button type="button" class="cf-icon" data-action="reorder" aria-label="Изменить порядок лент" title="Изменить порядок лент" aria-pressed="false">${uiIcon('sort')}</button>`;
-    dialog.innerHTML=head('Ваши ленты',false,reorder)+`<div class="cf-body"><span id="cf-reorder-help" hidden>Перетащите ленту или нажмите стрелку вверх или вниз на клавиатуре</span><ul class="cf-feed-list" aria-label="Ленты"></ul></div><footer class="cf-foot"><button class="cf-primary cf-secondary" data-action="create">Добавить новую ленту</button></footer>`;
+    dialog.innerHTML=head('Ваши ленты',false,reorder)+`
+      <div class="cf-body">
+        <span id="cf-reorder-help" hidden>Перетащите ленту или нажмите стрелку вверх или вниз на клавиатуре</span>
+        <ul class="cf-feed-list" aria-label="Ленты"></ul>
+        <button type="button" class="cf-row cf-add-feed-row" data-action="create">
+          <span class="cf-feed-icon">${uiIcon('plus')}</span><span class="cf-name">Добавить свою ленту</span>
+        </button>
+      </div>
+      <footer class="cf-foot"><button type="button" class="cf-primary" data-action="save-visibility" ${visibilityChanged()?'':'disabled'}>Сохранить</button></footer>`;
     renderManagerRows();
   }
   function moveFeed(id, offset, focusSelector, draggedTop) {
@@ -359,6 +371,7 @@
       if(index<0){
         state.custom.push(feed);
         state.visible.push(feed.id);
+        pendingVisible.add(feed.id);
         state.active=feed.id;
       }else state.custom[index]=feed;
       save();
@@ -390,6 +403,7 @@
   const feedList = feedSection?.querySelector('.sidebar__section-content');
   const openManager = event => {
     opener=event.currentTarget;
+    pendingVisible=new Set(state.visible);
     manager();
     dialog.showModal();
   };
@@ -500,6 +514,13 @@
     if(b.dataset.action==='back')manager();
     if(b.dataset.action==='create')editor();
     if(b.dataset.edit)editor(b.dataset.edit);
+    if(b.dataset.action==='save-visibility' && visibilityChanged()){
+      state.visible=[...pendingVisible];
+      if(!pendingVisible.has(state.active))state.active=null;
+      save();
+      renderFeed();
+      dialog.close();
+    }
     if(b.dataset.action==='reorder'){
       reordering=!reordering;
       b.setAttribute('aria-pressed',String(reordering));
@@ -526,16 +547,15 @@
       const id=draft.id;dialog.innerHTML=head('Удалить ленту?',true)+`<div class="cf-body"><p class="cf-intro">Лента «${esc(draft.name)}» будет удалена. Вы сможете создать новую подборку в любой момент.</p></div><footer class="cf-foot"><button class="cf-primary" data-action="confirm-delete">Удалить</button></footer>`;
       $('[data-action="back"]',dialog).onclick=e=>{e.stopPropagation();editor(id);};
     }
-    if(b.dataset.action==='confirm-delete'){const id=draft.id;state.custom=state.custom.filter(f=>f.id!==id);state.order=state.order.filter(x=>x!==id);state.visible=state.visible.filter(x=>x!==id);if(state.active===id)state.active=null;save();renderFeed();manager();toast('Лента удалена');}
+    if(b.dataset.action==='confirm-delete'){const id=draft.id;state.custom=state.custom.filter(f=>f.id!==id);state.order=state.order.filter(x=>x!==id);state.visible=state.visible.filter(x=>x!==id);pendingVisible.delete(id);if(state.active===id)state.active=null;save();renderFeed();manager();toast('Лента удалена');}
   });
   dialog.addEventListener('change',e=>{
     const input=e.target;
     if(input.dataset.visible){
       const id=input.dataset.visible;
-      state.visible=input.checked?[...state.visible,id]:state.visible.filter(visible=>visible!==id);
-      if(!state.visible.includes(state.active))state.active=null;
-      save();
-      renderFeed();
+      if(input.checked)pendingVisible.add(id);
+      else pendingVisible.delete(id);
+      $('[data-action="save-visibility"]',dialog).disabled=!visibilityChanged();
     }
     if(input.dataset.source){
       const id=input.dataset.source;
