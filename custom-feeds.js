@@ -308,10 +308,11 @@
   });
   const editableSources = feed => new Set(feed.sources.filter(id=>sourceIds.has(id)));
   function canSaveDraft() {
-    const name=draft.name.trim();
-    if(!name || !draft.sources.length)return false;
+    if(!draft.sources.length)return false;
     const original=state.custom.find(feed=>feed.id===draft.id);
     if(!original)return true;
+    const name=draft.name.trim();
+    if(!name)return false;
     const originalSources=editableSources(original);
     return name!==original.name.trim() || validIcon(draft.icon)!==validIcon(original.icon)
       || draft.sources.length!==originalSources.size || draft.sources.some(id=>!originalSources.has(id));
@@ -357,7 +358,9 @@
     const popup=$('#cf-icon-popover',dialog);
     popup.addEventListener('toggle',event=>$('.cf-name-icon',dialog)?.setAttribute('aria-expanded',String(event.newState==='open')));
     $('.cf-body',dialog).addEventListener('scroll',()=>popup.hidePopover());
-    $('#cf-name',dialog).focus();
+    const nameInput=$('#cf-name',dialog);
+    nameInput.setCustomValidity(draft.name.trim()?'':'Введите название ленты');
+    nameInput.focus();
     $('#cf-form',dialog).onsubmit=e=>{
       e.preventDefault();
       if(!canSaveDraft())return;
@@ -566,6 +569,7 @@
   dialog.addEventListener('input',e=>{
     if(e.target.id==='cf-name'){
       draft.name=e.target.value;
+      e.target.setCustomValidity(draft.name.trim()?'':'Введите название ленты');
       $('#cf-name-count',dialog).textContent=40-draft.name.length;
       $('.cf-error',dialog).textContent='';
       updateEditorControls();
