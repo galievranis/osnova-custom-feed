@@ -161,15 +161,16 @@
   const head=(title,back=false,actions='')=>`<header class="cf-head">${back?`<button class="cf-icon" data-action="back" aria-label="Назад">${uiIcon('back',22)}</button>`:''}<h2 id="cf-title">${title}</h2>${actions}<button class="cf-icon" data-action="close" aria-label="Закрыть">${uiIcon('cross',22)}</button></header>`;
   const authorCount = n => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'автор' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'автора' : 'авторов');
   const isCustom = feed => feed.id.startsWith('custom:');
+  const gripIcon = '<svg class="icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="7" cy="4" r="1.5"/><circle cx="13" cy="4" r="1.5"/><circle cx="7" cy="10" r="1.5"/><circle cx="13" cy="10" r="1.5"/><circle cx="7" cy="16" r="1.5"/><circle cx="13" cy="16" r="1.5"/></svg>';
   function feedRow(feed, before, after) {
     const custom=isCustom(feed);
     const id=esc(feed.id);
     const name=esc(feed.name);
     const move=(direction,enabled)=>`<button type="button" class="cf-icon cf-move" data-move="${direction}" aria-label="Переместить «${name}» ${direction<0?'вверх':'вниз'}" ${enabled?'':'disabled'}>${uiIcon(direction<0?'chevron_up':'chevron_down',20)}</button>`;
     const actions=reordering
-      ? `<div class="cf-move-actions">${move(-1,before)}${move(1,after)}</div>`
+      ? `<div class="cf-move-actions">${move(-1,before)}${move(1,after)}</div><button type="button" class="cf-icon cf-grip" ${before||after?'':'disabled'} aria-label="Переместить «${name}»" aria-describedby="cf-reorder-help" aria-keyshortcuts="ArrowUp ArrowDown" title="Перетащить">${gripIcon}</button>`
       : `${custom?`<button class="cf-icon" data-edit="${id}" aria-label="Редактировать ${name}">${uiIcon('pen')}</button>`:''}<input class="cf-check" type="checkbox" id="cf-${id}" data-visible="${id}" ${state.visible.includes(feed.id)?'checked':''} aria-label="Показывать ${name}">`;
-    return `<li class="cf-row" data-feed-row="${id}"><div class="cf-feed-icon">${iconSVG(feed.icon)}</div><label class="cf-info" ${reordering?'':`for="cf-${id}"`}><div class="cf-name">${name}</div><div class="cf-sub">${esc(custom?authorCount(feed.sources.filter(id=>authorIds.includes(id)).length):feed.description)}</div></label>${actions}</li>`;
+    return `<li class="cf-row" data-feed-row="${id}"><div class="cf-feed-icon">${iconSVG(feed.icon)}</div><label class="cf-info" ${reordering?'':`for="cf-${id}"`}><div class="cf-name">${name}</div><div class="cf-sub">${esc(custom?authorCount(feed.sources.filter(id=>authorIds.includes(id)).length):feed.description)}</div></label><div class="cf-row-actions">${actions}</div></li>`;
   }
   function renderManagerRows() {
     const feeds=orderedFeeds();
@@ -181,25 +182,95 @@
     draft=null;
     reordering=false;
     const reorder=`<button type="button" class="cf-icon" data-action="reorder" aria-label="Изменить порядок лент" title="Изменить порядок лент" aria-pressed="false">${uiIcon('sort')}</button>`;
-    dialog.innerHTML=head('Ваши ленты',false,reorder)+`<div class="cf-body"><ul class="cf-feed-list" aria-label="Ленты"></ul></div><footer class="cf-foot"><button class="cf-primary cf-secondary" data-action="create">Создать свою ленту</button></footer>`;
+    dialog.innerHTML=head('Ваши ленты',false,reorder)+`<div class="cf-body"><span id="cf-reorder-help" hidden>Перетащите ленту или нажмите стрелку вверх или вниз на клавиатуре</span><ul class="cf-feed-list" aria-label="Ленты"></ul></div><footer class="cf-foot"><button class="cf-primary cf-secondary" data-action="create">Создать свою ленту</button></footer>`;
     renderManagerRows();
   }
-  function moveFeed(button) {
-    const id=button.closest('[data-feed-row]').dataset.feedRow;
+  function moveFeed(id, offset, focusSelector, draggedTop) {
     const feeds=orderedFeeds();
     const from=feeds.findIndex(feed=>feed.id===id);
-    const direction=Number(button.dataset.move);
-    const to=from+direction;
-    if (!feeds[to] || isCustom(feeds[from])!==isCustom(feeds[to])) return;
-    [feeds[from],feeds[to]]=[feeds[to],feeds[from]];
+    const to=from+offset;
+    if (from<0 || !offset || !feeds[to] || isCustom(feeds[from])!==isCustom(feeds[to])) return;
+    const motion=!matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const previousTops=new Map();
+    if(motion){
+      dialog.querySelectorAll('[data-feed-row]').forEach(row=>previousTops.set(row.dataset.feedRow,row.getBoundingClientRect().top));
+      if(draggedTop!==undefined)previousTops.set(id,draggedTop);
+    }
+    const [feed]=feeds.splice(from,1);
+    feeds.splice(to,0,feed);
     state.order=feeds.map(feed=>feed.id);
     save();
     renderFeed();
     renderManagerRows();
-    const row=[...dialog.querySelectorAll('[data-feed-row]')].find(row=>row.dataset.feedRow===id);
-    const focus=row.querySelector(`[data-move="${direction}"]:enabled`) || row.querySelector('[data-move]:enabled');
-    focus?.focus();
+    dialog.querySelectorAll('[data-feed-row]').forEach(row=>{
+      if(motion){
+        const distance=previousTops.get(row.dataset.feedRow)-row.getBoundingClientRect().top;
+        if(distance)row.animate([{transform:`translateY(${distance}px)`},{transform:'none'}],{duration:200,easing:'ease-out'});
+      }
+      if(row.dataset.feedRow===id){
+        const focus=row.querySelector(focusSelector) || row.querySelector('[data-move]:enabled');
+        focus?.focus({preventScroll:true});
+      }
+    });
   }
+  let drag;
+  function endDrag() {
+    if(!drag)return;
+    drag.target?.removeAttribute('data-drop-side');
+    drag.row.classList.remove('cf-dragging');
+    drag.row.style.removeProperty('translate');
+    drag=null;
+  }
+  dialog.addEventListener('pointerdown',event=>{
+    const handle=event.target.closest('.cf-grip:enabled');
+    if(!handle || event.button!==0 || !event.isPrimary)return;
+    const row=handle.closest('[data-feed-row]');
+    drag={row, startY:event.clientY, startTop:row.getBoundingClientRect().top, offset:0};
+    handle.setPointerCapture(event.pointerId);
+  });
+  dialog.addEventListener('pointermove',event=>{
+    if(!drag || !event.isPrimary)return;
+    if(!drag.row.classList.contains('cf-dragging') && Math.abs(event.clientY-drag.startY)<4)return;
+    drag.row.classList.add('cf-dragging');
+    const body=drag.row.closest('.cf-body');
+    const bodyBounds=body.getBoundingClientRect();
+    if(event.clientY<bodyBounds.top+24)body.scrollTop-=12;
+    else if(event.clientY>bodyBounds.bottom-24)body.scrollTop+=12;
+
+    drag.row.style.removeProperty('translate');
+    const top=drag.row.getBoundingClientRect().top;
+    drag.row.style.translate=`0 ${event.clientY-drag.startY+drag.startTop-top}px`;
+    drag.target?.removeAttribute('data-drop-side');
+    drag.target=null;
+    drag.offset=0;
+
+    const target=document.elementFromPoint(event.clientX,event.clientY)?.closest('[data-feed-row]');
+    if(!target || target.parentElement!==drag.row.parentElement)return;
+    if(target.dataset.feedRow.startsWith('custom:')!==drag.row.dataset.feedRow.startsWith('custom:'))return;
+    const rows=[...target.parentElement.children];
+    const from=rows.indexOf(drag.row), to=rows.indexOf(target);
+    const bounds=target.getBoundingClientRect();
+    const after=event.clientY>bounds.top+bounds.height/2;
+    const offset=to-from+Number(after)-Number(to>from);
+    if(!offset)return;
+    drag.offset=offset;
+    drag.target=target;
+    target.dataset.dropSide=after?'after':'before';
+  });
+  dialog.addEventListener('pointerup',event=>{
+    if(!drag || !event.isPrimary)return;
+    const {row,offset}=drag;
+    const draggedTop=row.getBoundingClientRect().top;
+    endDrag();
+    moveFeed(row.dataset.feedRow,offset,'.cf-grip:enabled',draggedTop);
+  });
+  dialog.addEventListener('lostpointercapture',endDrag);
+  dialog.addEventListener('keydown',event=>{
+    const handle=event.target.closest('.cf-grip');
+    if(!handle || !['ArrowUp','ArrowDown'].includes(event.key))return;
+    event.preventDefault();
+    moveFeed(handle.closest('[data-feed-row]').dataset.feedRow,event.key==='ArrowUp'?-1:1,'.cf-grip:enabled');
+  });
   function editor(id) {
     const existing=state.custom.find(f=>f.id===id);
     draft=existing?{...existing,sources:[...new Set(existing.sources.filter(id=>authorIds.includes(id)))]}:{name:'',sources:[],icon:'bookmark'};
@@ -345,6 +416,7 @@
     strip.innerHTML=iconOptions.map(([id,name])=>`<button type="button" class="cf-icon-option" data-icon="${id}" aria-label="${name}" title="${name}" aria-pressed="${validIcon(draft.icon)===id}">${iconSVG(id)}</button>`).join('');
   }
   dialog.addEventListener('close',()=>{
+    endDrag();
     const fallback=matchMedia('(max-width:924px)').matches
       ? $('.cf-mobile-manage')
       : state.visible.length ? settingsButton : addFeedButton;
@@ -380,7 +452,7 @@
       b.setAttribute('aria-pressed',String(reordering));
       renderManagerRows();
     }
-    if(b.dataset.move)moveFeed(b);
+    if(b.dataset.move)moveFeed(b.closest('[data-feed-row]').dataset.feedRow,Number(b.dataset.move),`[data-move="${b.dataset.move}"]:enabled`);
     if(b.dataset.action==='select-authors'){
       draft.sources=[...authorIds];
       updateSources();
