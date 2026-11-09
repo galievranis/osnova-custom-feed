@@ -188,7 +188,7 @@
     draft=null;
     reordering=false;
     const reorder=`<button type="button" class="cf-icon" data-action="reorder" aria-label="Изменить порядок лент" title="Изменить порядок лент" aria-pressed="false">${uiIcon('sort')}</button>`;
-    dialog.innerHTML=head('Ваши ленты',false,reorder)+`<div class="cf-body"><span id="cf-reorder-help" hidden>Перетащите ленту или нажмите стрелку вверх или вниз на клавиатуре</span><ul class="cf-feed-list" aria-label="Ленты"></ul></div><footer class="cf-foot"><button class="cf-primary cf-secondary" data-action="create">Создать свою ленту</button></footer>`;
+    dialog.innerHTML=head('Ваши ленты',false,reorder)+`<div class="cf-body"><span id="cf-reorder-help" hidden>Перетащите ленту или нажмите стрелку вверх или вниз на клавиатуре</span><ul class="cf-feed-list" aria-label="Ленты"></ul></div><footer class="cf-foot"><button class="cf-primary cf-secondary" data-action="create">Добавить новую ленту</button></footer>`;
     renderManagerRows();
   }
   function moveFeed(id, offset, focusSelector, draggedTop) {
