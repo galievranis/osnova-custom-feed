@@ -80,13 +80,21 @@
     }
   } catch {}
   const all = () => [...presets,...state.custom];
-  const orderedFeeds = () => {
+  const orderedFeeds = (order=state.order) => {
     const byId = new Map(all().map(feed=>[feed.id,feed]));
-    const ids = [...new Set([...state.order,...byId.keys()])];
+    const ids = [...new Set([...order,...byId.keys()])];
     return ids.map(id=>byId.get(id)).filter(Boolean);
   };
   const visibleFeeds = () => orderedFeeds().filter(feed=>state.visible.includes(feed.id));
-  const save = () => {try {localStorage.setItem('vc-custom-feeds-v1',JSON.stringify(state));} catch {toast('Не удалось сохранить настройки в браузере');}};
+  const save = () => {
+    try {
+      localStorage.setItem('vc-custom-feeds-v1',JSON.stringify(state));
+      return true;
+    } catch {
+      toast('Не удалось сохранить настройки в браузере');
+      return false;
+    }
+  };
   const toast = text => {document.querySelector('.cf-status')?.remove();const e=document.createElement('div');e.className='cf-status';e.role='status';e.textContent=text;document.body.append(e);setTimeout(()=>e.remove(),3000);};
   const navbar = $('.feed-sorting .navbar');
   if (!navbar) return;
@@ -172,10 +180,10 @@
 
   navbar.querySelectorAll('.tabs__tab').forEach(t=>t.addEventListener('click',e=>{e.preventDefault();baseActive=t.dataset.localOriginalHref || 'https://vc.ru/popular';state.active=null;save();renderFeed();navbar.querySelectorAll('.tabs__tab').forEach(x=>x.classList.toggle('tabs__tab--active',x===t));}));
   const dialog=document.createElement('dialog');dialog.className='cf-dialog';dialog.setAttribute('aria-labelledby','cf-title');document.body.append(dialog);
-  let draft, opener, reordering=false;
+  let draft, opener, pendingOrder=[];
   let pendingVisible=new Set();
   const uiIcon=(name,size=24)=>`<svg class="icon" width="${size}" height="${size}" aria-hidden="true"><use href="#sprite-${name}"></use></svg>`;
-  const head=(title,back=false,actions='')=>`<header class="cf-head">${back?`<button class="cf-icon" data-action="back" aria-label="Назад">${uiIcon('back',22)}</button>`:''}<h2 id="cf-title">${title}</h2>${actions}<button class="cf-icon" data-action="close" aria-label="Закрыть">${uiIcon('cross',22)}</button></header>`;
+  const head=(title,back=false)=>`<header class="cf-head">${back?`<button class="cf-icon" data-action="back" aria-label="Назад">${uiIcon('back',22)}</button>`:''}<h2 id="cf-title">${title}</h2><button class="cf-icon" data-action="close" aria-label="Закрыть">${uiIcon('cross',22)}</button></header>`;
   const pluralCount = (n,[one,few,many]) => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many);
   function feedSourceCount(feed) {
     const selected=feed.sources.filter(id=>sourceIds.has(id));
@@ -188,29 +196,36 @@
   }
   const isCustom = feed => feed.id.startsWith('custom:');
   const gripIcon = '<svg class="icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="7" cy="4" r="1.5"/><circle cx="13" cy="4" r="1.5"/><circle cx="7" cy="10" r="1.5"/><circle cx="13" cy="10" r="1.5"/><circle cx="7" cy="16" r="1.5"/><circle cx="13" cy="16" r="1.5"/></svg>';
-  function feedRow(feed, before, after) {
+  function feedRow(feed) {
     const custom=isCustom(feed);
     const id=esc(feed.id);
     const name=esc(feed.name);
-    const move=(direction,enabled)=>`<button type="button" class="cf-icon cf-move" data-move="${direction}" aria-label="Переместить «${name}» ${direction<0?'вверх':'вниз'}" ${enabled?'':'disabled'}>${uiIcon(direction<0?'chevron_up':'chevron_down',20)}</button>`;
-    const actions=reordering
-      ? `<div class="cf-move-actions">${move(-1,before)}${move(1,after)}</div><button type="button" class="cf-icon cf-grip" ${before||after?'':'disabled'} aria-label="Переместить «${name}»" aria-describedby="cf-reorder-help" aria-keyshortcuts="ArrowUp ArrowDown" title="Перетащить">${gripIcon}</button>`
-      : `${custom?`<button class="cf-icon" data-edit="${id}" aria-label="Редактировать ${name}">${uiIcon('pen')}</button>`:''}<input class="cf-check" type="checkbox" id="cf-${id}" data-visible="${id}" ${pendingVisible.has(feed.id)?'checked':''} aria-label="Показывать ${name}">`;
-    return `<li class="cf-row" data-feed-row="${id}"><div class="cf-feed-icon">${iconImage(feedIconId(feed))}</div><label class="cf-info" ${reordering?'':`for="cf-${id}"`}><div class="cf-name">${name}</div><div class="cf-sub">${esc(custom?feedSourceCount(feed):feed.description)}</div></label><div class="cf-row-actions">${actions}</div></li>`;
+    return `<li class="cf-row" data-feed-row="${id}">
+      <div class="cf-feed-icon">${iconImage(feedIconId(feed))}</div>
+      <label class="cf-info" for="cf-${id}"><div class="cf-name">${name}</div><div class="cf-sub">${esc(custom?feedSourceCount(feed):feed.description)}</div></label>
+      <div class="cf-row-actions">
+        ${custom?`<button class="cf-icon" data-edit="${id}" aria-label="Редактировать ${name}">${uiIcon('pen')}</button>`:''}
+        <span class="cf-visibility">
+          <input type="checkbox" id="cf-${id}" data-visible="${id}" ${pendingVisible.has(feed.id)?'checked':''} aria-label="Показывать ${name}">
+          <span class="cf-visibility-icon" aria-hidden="true"></span>
+        </span>
+        <button type="button" class="cf-icon cf-grip" aria-label="Переместить «${name}»" aria-describedby="cf-reorder-help" aria-keyshortcuts="ArrowUp ArrowDown" title="Перетащить">${gripIcon}</button>
+      </div>
+    </li>`;
   }
   function renderManagerRows() {
-    const feeds=orderedFeeds();
-    $('.cf-feed-list',dialog).innerHTML=feeds.map((feed,index)=>feedRow(feed,
-      index>0,index<feeds.length-1)).join('');
+    $('.cf-feed-list',dialog).innerHTML=orderedFeeds(pendingOrder).map(feedRow).join('');
   }
-  function visibilityChanged() {
-    return pendingVisible.size!==state.visible.length || state.visible.some(id=>!pendingVisible.has(id));
+  function managerChanged() {
+    return pendingVisible.size!==state.visible.length || state.visible.some(id=>!pendingVisible.has(id))
+      || orderedFeeds().some((feed,index)=>feed.id!==pendingOrder[index]);
+  }
+  function updateManagerSave() {
+    $('[data-action="save-manager"]',dialog).disabled=!managerChanged();
   }
   function manager() {
     draft=null;
-    reordering=false;
-    const reorder=`<button type="button" class="cf-icon" data-action="reorder" aria-label="Изменить порядок лент" title="Изменить порядок лент" aria-pressed="false">${uiIcon('sort')}</button>`;
-    dialog.innerHTML=head('Ваши ленты',false,reorder)+`
+    dialog.innerHTML=head('Ваши ленты')+`
       <div class="cf-body">
         <span id="cf-reorder-help" hidden>Перетащите ленту или нажмите стрелку вверх или вниз на клавиатуре</span>
         <ul class="cf-feed-list" aria-label="Ленты"></ul>
@@ -218,11 +233,14 @@
           <span class="cf-feed-icon">${uiIcon('plus')}</span><span class="cf-name">Добавить свою ленту</span>
         </button>
       </div>
-      <footer class="cf-foot"><button type="button" class="cf-primary" data-action="save-visibility" ${visibilityChanged()?'':'disabled'}>Сохранить</button></footer>`;
+      <footer class="cf-foot">
+        <button type="button" class="cf-primary" data-action="save-manager">Сохранить</button>
+      </footer>`;
     renderManagerRows();
+    updateManagerSave();
   }
-  function moveFeed(id, offset, focusSelector, draggedTop) {
-    const feeds=orderedFeeds();
+  function moveFeed(id, offset, draggedTop) {
+    const feeds=orderedFeeds(pendingOrder);
     const from=feeds.findIndex(feed=>feed.id===id);
     const to=from+offset;
     if (from<0 || !offset || !feeds[to]) return;
@@ -234,18 +252,16 @@
     }
     const [feed]=feeds.splice(from,1);
     feeds.splice(to,0,feed);
-    state.order=feeds.map(feed=>feed.id);
-    save();
-    renderFeed();
+    pendingOrder=feeds.map(feed=>feed.id);
     renderManagerRows();
+    updateManagerSave();
     dialog.querySelectorAll('[data-feed-row]').forEach(row=>{
       if(motion){
         const distance=previousTops.get(row.dataset.feedRow)-row.getBoundingClientRect().top;
         if(distance)row.animate([{transform:`translateY(${distance}px)`},{transform:'none'}],{duration:200,easing:'ease-out'});
       }
       if(row.dataset.feedRow===id){
-        const focus=row.querySelector(focusSelector) || row.querySelector('[data-move]:enabled');
-        focus?.focus({preventScroll:true});
+        $('.cf-grip',row).focus({preventScroll:true});
       }
     });
   }
@@ -258,7 +274,7 @@
     drag=null;
   }
   dialog.addEventListener('pointerdown',event=>{
-    const handle=event.target.closest('.cf-grip:enabled');
+    const handle=event.target.closest('.cf-grip');
     if(!handle || event.button!==0 || !event.isPrimary)return;
     const row=handle.closest('[data-feed-row]');
     drag={row, startY:event.clientY, startTop:row.getBoundingClientRect().top, offset:0};
@@ -266,6 +282,7 @@
   });
   dialog.addEventListener('pointermove',event=>{
     if(!drag || !event.isPrimary)return;
+    if(!event.buttons){endDrag();return;}
     if(!drag.row.classList.contains('cf-dragging') && Math.abs(event.clientY-drag.startY)<4)return;
     drag.row.classList.add('cf-dragging');
     const body=drag.row.closest('.cf-body');
@@ -297,14 +314,15 @@
     const {row,offset}=drag;
     const draggedTop=row.getBoundingClientRect().top;
     endDrag();
-    moveFeed(row.dataset.feedRow,offset,'.cf-grip:enabled',draggedTop);
+    moveFeed(row.dataset.feedRow,offset,draggedTop);
   });
+  dialog.addEventListener('pointercancel',endDrag);
   dialog.addEventListener('lostpointercapture',endDrag);
   dialog.addEventListener('keydown',event=>{
     const handle=event.target.closest('.cf-grip');
     if(!handle || !['ArrowUp','ArrowDown'].includes(event.key))return;
     event.preventDefault();
-    moveFeed(handle.closest('[data-feed-row]').dataset.feedRow,event.key==='ArrowUp'?-1:1,'.cf-grip:enabled');
+    moveFeed(handle.closest('[data-feed-row]').dataset.feedRow,event.key==='ArrowUp'?-1:1);
   });
   const editableSources = feed => new Set(feed.sources.filter(id=>sourceIds.has(id)));
   function canSaveDraft() {
@@ -332,10 +350,12 @@
       <form id="cf-form">
         <div class="cf-body">
           <label class="cf-label" for="cf-name">Название</label>
-          <div class="cf-name-row">
+          <div class="cf-name-control">
             <button type="button" class="cf-icon cf-name-icon" data-action="pick-icon" aria-label="Выбрать иконку ленты" aria-expanded="false" aria-controls="cf-icon-popover">${iconImage(draft.icon)}</button>
-            <div class="cf-name-control"><input class="cf-input" id="cf-name" placeholder="Название ленты" maxlength="40" required value="${esc(draft.name)}" aria-describedby="cf-name-count"><span class="cf-count" id="cf-name-count" aria-label="Осталось символов">${40-draft.name.length}</span></div>
+            <input class="cf-input" id="cf-name" placeholder="Название ленты" maxlength="40" required value="${esc(draft.name)}" aria-describedby="cf-name-count cf-name-error">
+            <span class="cf-count" id="cf-name-count" aria-label="Осталось символов">${40-draft.name.length}</span>
           </div>
+          <div class="cf-error" id="cf-name-error" role="alert"></div>
           <div class="cf-icon-popover" id="cf-icon-popover" popover="auto" role="group" aria-label="Иконка ленты"><div class="cf-icon-grid"></div></div>
           <div class="cf-source-picker">
             <div class="cf-source-switch" role="group" aria-label="Источники ленты">
@@ -344,7 +364,6 @@
             </div>
             ${sourcePanel('authors','cf-author-panel')}
             ${sourcePanel('trends','cf-trend-panel',true)}
-            <div class="cf-error" role="alert"></div>
           </div>
         </div>
         <footer class="cf-foot">
@@ -366,7 +385,11 @@
       if(!canSaveDraft())return;
       const name=draft.name.trim();
       if(all().some(f=>f.id!==draft.id&&f.name.toLocaleLowerCase()===name.toLocaleLowerCase())){
-        $('.cf-error',dialog).textContent='Лента с таким названием уже существует';
+        const error=$('#cf-name-error',dialog);
+        error.textContent='Лента с таким названием уже существует';
+        nameInput.setAttribute('aria-invalid','true');
+        nameInput.focus();
+        error.scrollIntoView({block:'nearest'});
         return;
       }
       const feed={id:draft.id||'custom:'+crypto.randomUUID(),name,icon:validIcon(draft.icon),sources:[...draft.sources]};
@@ -375,6 +398,7 @@
         state.custom.push(feed);
         state.visible.push(feed.id);
         pendingVisible.add(feed.id);
+        pendingOrder.push(feed.id);
         state.active=feed.id;
       }else state.custom[index]=feed;
       save();
@@ -407,6 +431,7 @@
   const openManager = event => {
     opener=event.currentTarget;
     pendingVisible=new Set(state.visible);
+    pendingOrder=orderedFeeds().map(feed=>feed.id);
     manager();
     dialog.showModal();
   };
@@ -517,19 +542,21 @@
     if(b.dataset.action==='back')manager();
     if(b.dataset.action==='create')editor();
     if(b.dataset.edit)editor(b.dataset.edit);
-    if(b.dataset.action==='save-visibility' && visibilityChanged()){
-      state.visible=[...pendingVisible];
-      if(!pendingVisible.has(state.active))state.active=null;
-      save();
+    if(b.dataset.action==='save-manager' && managerChanged()){
+      const previous=state;
+      state={
+        ...state,
+        visible:[...pendingVisible],
+        order:[...pendingOrder],
+        active:pendingVisible.has(state.active)?state.active:null
+      };
+      if(!save()){
+        state=previous;
+        return;
+      }
       renderFeed();
       dialog.close();
     }
-    if(b.dataset.action==='reorder'){
-      reordering=!reordering;
-      b.setAttribute('aria-pressed',String(reordering));
-      renderManagerRows();
-    }
-    if(b.dataset.move)moveFeed(b.closest('[data-feed-row]').dataset.feedRow,Number(b.dataset.move),`[data-move="${b.dataset.move}"]:enabled`);
     if(b.dataset.sourceView){
       dialog.querySelectorAll('[data-source-view]').forEach(button=>button.setAttribute('aria-pressed',String(button===b)));
       $('#cf-author-panel',dialog).hidden=b.dataset.sourceView!=='authors';
@@ -550,7 +577,7 @@
       const id=draft.id;dialog.innerHTML=head('Удалить ленту?',true)+`<div class="cf-body"><p class="cf-intro">Лента «${esc(draft.name)}» будет удалена. Вы сможете создать новую подборку в любой момент.</p></div><footer class="cf-foot"><button class="cf-primary" data-action="confirm-delete">Удалить</button></footer>`;
       $('[data-action="back"]',dialog).onclick=e=>{e.stopPropagation();editor(id);};
     }
-    if(b.dataset.action==='confirm-delete'){const id=draft.id;state.custom=state.custom.filter(f=>f.id!==id);state.order=state.order.filter(x=>x!==id);state.visible=state.visible.filter(x=>x!==id);pendingVisible.delete(id);if(state.active===id)state.active=null;save();renderFeed();manager();toast('Лента удалена');}
+    if(b.dataset.action==='confirm-delete'){const id=draft.id;state.custom=state.custom.filter(f=>f.id!==id);state.order=state.order.filter(x=>x!==id);state.visible=state.visible.filter(x=>x!==id);pendingVisible.delete(id);pendingOrder=pendingOrder.filter(x=>x!==id);if(state.active===id)state.active=null;save();renderFeed();manager();toast('Лента удалена');}
   });
   dialog.addEventListener('change',e=>{
     const input=e.target;
@@ -558,7 +585,7 @@
       const id=input.dataset.visible;
       if(input.checked)pendingVisible.add(id);
       else pendingVisible.delete(id);
-      $('[data-action="save-visibility"]',dialog).disabled=!visibilityChanged();
+      updateManagerSave();
     }
     if(input.dataset.source){
       const id=input.dataset.source;
@@ -571,7 +598,8 @@
       draft.name=e.target.value;
       e.target.setCustomValidity(draft.name.trim()?'':'Введите название ленты');
       $('#cf-name-count',dialog).textContent=40-draft.name.length;
-      $('.cf-error',dialog).textContent='';
+      e.target.removeAttribute('aria-invalid');
+      $('#cf-name-error',dialog).textContent='';
       updateEditorControls();
     }
     if(e.target.hasAttribute('data-source-search'))renderSourceResults(e.target.closest('[data-source-panel]'));
